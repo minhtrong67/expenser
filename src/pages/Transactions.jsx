@@ -375,13 +375,13 @@ export default function TransactionsPage() {
                           onDelete={
                             isTransfer ? undefined : () => setDeleteTarget(t)
                           }
-                          onTap={() => {
-                            if (selectMode) {
-                              if (!isTransfer) toggleSelect(t.id);
-                              return;
-                            }
-                            setDetailTarget(t);
-                          }}
+                          // onTap={() => {
+                          //   if (selectMode) {
+                          //     if (!isTransfer) toggleSelect(t.id);
+                          //     return;
+                          //   }
+                          //   setDetailTarget(t);
+                          // }}
                         >
                           <div
                             className={`flex items-center gap-3 rounded-xl border bg-white p-3.5 transition dark:bg-zinc-900 ${
