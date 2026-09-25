@@ -175,29 +175,34 @@ export default function TransactionsPage() {
           </>
         ) : (
           <>
-            <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
-                <Icon name="arrow_upward" size={19} />
+            <div className="flex flex-col items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-emerald-500/20 dark:bg-emerald-500/10">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20">
+                <Icon name="arrow_upward" size={20} />
               </span>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                  Thu hôm nay
+
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                  Thu tháng này
                 </p>
-                <p className="truncate text-sm font-bold tabular-nums text-emerald-800 sm:text-base dark:text-emerald-300">
-                  {formatMoney(stats.todayIncome)}
+
+                <p className="mt-0.5 text-base font-bold leading-tight tabular-nums text-emerald-800 sm:text-lg dark:text-emerald-300">
+                  {formatMoney(stats.monthIncome)}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 dark:border-rose-500/20 dark:bg-rose-500/10">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500 text-white">
-                <Icon name="arrow_downward" size={19} />
+
+            <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-rose-500/20 dark:bg-rose-500/10">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500 text-white shadow-sm shadow-rose-500/20">
+                <Icon name="arrow_downward" size={20} />
               </span>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-rose-700 dark:text-rose-400">
-                  Chi hôm nay
+
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">
+                  Chi tháng này
                 </p>
-                <p className="truncate text-sm font-bold tabular-nums text-rose-800 sm:text-base dark:text-rose-300">
-                  {formatMoney(stats.todayExpense)}
+
+                <p className="mt-0.5 text-base font-bold leading-tight tabular-nums text-rose-800 sm:text-lg dark:text-rose-300">
+                  {formatMoney(stats.monthExpense)}
                 </p>
               </div>
             </div>
@@ -211,7 +216,7 @@ export default function TransactionsPage() {
             <button
               key={v.id}
               onClick={() => setView(v.id)}
-              className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition ${
+              className={`flex items-center justify-center gap-1.5 rounded-lg py-3 text-sm font-semibold transition ${
                 view === v.id
                   ? "bg-white text-accent-700 shadow-sm dark:bg-zinc-900 dark:text-accent-400"
                   : "text-zinc-500"
@@ -340,7 +345,7 @@ export default function TransactionsPage() {
               <p className="px-1 text-xs text-zinc-400">
                 {selectMode
                   ? "Chạm vào giao dịch để chọn"
-                  : "Vuốt phải để sửa · vuốt trái để xóa · chạm để xem chi tiết"}
+                  : "Vuốt phải để sửa · vuốt trái để xóa"}
               </p>
               {groups.map((group) => (
                 <div key={dayKey(group.date)}>
@@ -348,10 +353,26 @@ export default function TransactionsPage() {
                     <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-400">
                       {formatDayHeader(group.date)}
                     </h3>
+
                     {/* <div className="flex shrink-0 items-center gap-2 text-[11px] font-semibold tabular-nums">
                       {group.income > 0 && <span className="text-emerald-600">+{formatMoney(group.income)}</span>}
                       {group.expense > 0 && <span className="text-rose-500">-{formatMoney(group.expense)}</span>}
                     </div> */}
+
+                    <div className="flex shrink-0 items-center gap-2 font-semibold tabular-nums">
+                      {(group.income > 0 || group.expense > 0) && (
+                        <span
+                          className={
+                            group.income - group.expense >= 0
+                              ? "text-emerald-600"
+                              : "text-rose-500"
+                          }
+                        >
+                          {group.income - group.expense >= 0 ? "+" : "-"}
+                          {formatMoney(Math.abs(group.income - group.expense))}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2.5">
                     {group.items.map((t) => {

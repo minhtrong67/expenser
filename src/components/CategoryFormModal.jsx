@@ -53,8 +53,19 @@ export default function CategoryFormModal({ open, onClose, editing, defaultType 
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={editing ? 'Sửa danh mục' : 'Thêm danh mục'} size="md">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={editing ? 'Sửa danh mục' : 'Thêm danh mục'}
+      size="full"
+      footer={
+        <div className="flex gap-3">
+          <Button type="button" variant="outline-danger" icon="close" className="flex-1" onClick={onClose} disabled={saving}>Hủy</Button>
+          <Button type="submit" form="category-form" icon="check" className="flex-1" loading={saving}>{editing ? 'Lưu' : 'Thêm'}</Button>
+        </div>
+      }
+    >
+      <form id="category-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
           <button
             type="button"
@@ -90,11 +101,6 @@ export default function CategoryFormModal({ open, onClose, editing, defaultType 
         <Field label="Màu sắc">
           <ColorPicker colors={CATEGORY_COLORS} value={form.color} onChange={(color) => setForm((f) => ({ ...f, color }))} />
         </Field>
-
-        <div className="mt-1 flex gap-3">
-          <Button type="button" variant="outline-danger" icon="close" className="flex-1" onClick={onClose} disabled={saving}>Hủy</Button>
-          <Button type="submit" icon="check" className="flex-1" loading={saving}>{editing ? 'Lưu' : 'Thêm'}</Button>
-        </div>
       </form>
     </Modal>
   );

@@ -18,6 +18,37 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
 
   if (!open) return null;
 
+  // Full-screen sheet: covers the entire viewport (used for content-heavy
+  // forms like adding/editing a transaction or category) instead of the
+  // regular centered/bottom-sheet dialog.
+  if (size === 'full') {
+    return createPortal(
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex animate-slide-up flex-col bg-white dark:bg-zinc-900"
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+            aria-label="Đóng"
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-5">{children}</div>
+        {footer && <div className="shrink-0 border-t border-zinc-100 px-5 py-4 dark:border-zinc-800">{footer}</div>}
+      </div>,
+      document.body
+    );
+  }
+
   const widthCls = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-2xl' }[size] || 'max-w-md';
 
   return createPortal(

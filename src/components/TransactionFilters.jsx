@@ -6,6 +6,9 @@ export default function TransactionFilters({ filters, setFilters, categories, wa
     setFilters((f) => ({ ...f, ...patch }));
   }
 
+  const sortedCategories = [...categories].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  const sortedWallets = [...wallets].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+
   return (
     <div className="rounded-2xl border border-zinc-100 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex flex-col gap-3">
@@ -35,7 +38,7 @@ export default function TransactionFilters({ filters, setFilters, categories, wa
             className="min-w-0 flex-1 basis-[160px] rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm text-zinc-700 outline-none focus:border-accent-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
           >
             <option value="all">Tất cả danh mục</option>
-            {categories.map((c) => (
+            {sortedCategories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
@@ -45,7 +48,7 @@ export default function TransactionFilters({ filters, setFilters, categories, wa
             className="min-w-0 flex-1 basis-[140px] rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm text-zinc-700 outline-none focus:border-accent-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
           >
             <option value="all">Tất cả ví</option>
-            {wallets.map((w) => (
+            {sortedWallets.map((w) => (
               <option key={w.id} value={w.id}>{w.name}</option>
             ))}
           </select>

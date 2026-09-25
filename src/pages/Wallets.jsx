@@ -114,7 +114,7 @@ export default function WalletsPage() {
       ) : (
         <>
           <p className="px-1 text-xs text-zinc-400">
-            Vuốt phải để sửa · vuốt trái để xóa · chạm để xem chi tiết
+            Vuốt phải để sửa · vuốt trái để xóa
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {wallets.map((w, idx) => (

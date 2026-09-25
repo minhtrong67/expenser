@@ -58,7 +58,7 @@ export default function EmojiPicker({ value, onChange }) {
         </div>
       )}
 
-      <div className="max-h-56 space-y-3 overflow-y-auto pr-1">
+      <div className="max-h-56 space-y-3 overflow-y-auto pr-1 sm:max-h-72">
         {groups.map((g) => (
           <div key={g.label}>
             <p className="mb-1.5 text-xs font-semibold text-zinc-400">{g.label}</p>

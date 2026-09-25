@@ -8,7 +8,7 @@ import {
   User, FileSpreadsheet, Table, PlayCircle, QrCode, Building2, Receipt, RotateCcw,
   PiggyBank, Clock, Search, SearchX, Settings, LineChart, LayoutDashboard,
   ClipboardList, TrendingUp, TrendingDown, SlidersHorizontal, FileUp, Eye, EyeOff,
-  AlertTriangle, UserCircle, Landmark,
+  AlertTriangle, UserCircle, Landmark, ArrowDownAZ, ArrowDownZA,
 } from 'lucide-react';
 
 // Legacy string keys are the old Material Symbols names already used
@@ -86,6 +86,8 @@ const ICON_MAP = {
   smartphone: Smartphone,
   space_dashboard: LayoutDashboard,
   summarize: ClipboardList,
+  sort_az: ArrowDownAZ,
+  sort_za: ArrowDownZA,
   sync_alt: ArrowLeftRight,
   table_view: Table,
   trending_down: TrendingDown,

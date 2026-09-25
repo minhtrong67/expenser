@@ -32,7 +32,9 @@ export default function TransferModal({ open, onClose, defaultFromWalletId }) {
   }, [open, defaultFromWalletId]);
 
   const fromWallet = wallets.find((w) => w.id === form.fromWalletId);
-  const walletOptions = wallets.map((w) => ({ id: w.id, name: w.name, icon: w.icon, color: w.color, subtitle: formatMoney(w.balance) }));
+  const walletOptions = wallets
+    .map((w) => ({ id: w.id, name: w.name, icon: w.icon, color: w.color, subtitle: formatMoney(w.balance) }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   const toOptions = walletOptions.filter((w) => w.id !== form.fromWalletId);
 
   async function handleSubmit(e) {

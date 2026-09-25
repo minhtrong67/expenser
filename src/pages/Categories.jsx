@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import Icon from "../components/ui/Icon";
 import Emoji from "../components/ui/Emoji";
 import Button from "../components/ui/Button";
 import Modal from "../components/ui/Modal";
+import TextInput from "../components/ui/TextInput";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import SwipeableItem from "../components/ui/SwipeableItem";
 import { TableSkeleton } from "../components/ui/Skeleton";
@@ -15,19 +17,25 @@ import { formatMoney } from "../utils/format";
 export default function CategoriesPage() {
   const { categories, transactions, deleteCategory, loading } = useData();
   const [tab, setTab] = useState("expense");
+  const [search, setSearch] = useState("");
+  const [sortDir, setSortDir] = useState("asc"); // 'asc' (A-Z) | 'desc' (Z-A)
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [detailTarget, setDetailTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const list = useMemo(
-    () =>
-      categories
-        .filter((c) => c.type === tab)
-        .sort((a, b) => a.name.localeCompare(b.name, "vi")),
-    [categories, tab],
-  );
+  const list = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return categories
+      .filter((c) => c.type === tab)
+      .filter((c) => !q || c.name.toLowerCase().includes(q))
+      .sort((a, b) =>
+        sortDir === "asc"
+          ? a.name.localeCompare(b.name, "vi")
+          : b.name.localeCompare(a.name, "vi"),
+      );
+  }, [categories, tab, search, sortDir]);
 
   function usageCount(catId) {
     return transactions.filter((t) => t.categoryId === catId).length;
@@ -63,22 +71,21 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="grid w-full max-w-xs grid-cols-2 gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
+        <div className="grid w-full grid-cols-2 gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
           <button
             onClick={() => setTab("expense")}
-            className={`rounded-lg py-2 text-sm font-semibold transition ${tab === "expense" ? "bg-white text-rose-600 shadow-sm dark:bg-zinc-900" : "text-zinc-500"}`}
+            className={`rounded-lg py-3 text-sm font-semibold w-full transition ${tab === "expense" ? "bg-white text-rose-600 shadow-sm dark:bg-zinc-900" : "text-zinc-500"}`}
           >
             Danh mục chi
           </button>
           <button
             onClick={() => setTab("income")}
-            className={`rounded-lg py-2 text-sm font-semibold transition ${tab === "income" ? "bg-white text-emerald-600 shadow-sm dark:bg-zinc-900" : "text-zinc-500"}`}
+            className={`rounded-lg py-3 text-sm font-semibold w-full transition ${tab === "income" ? "bg-white text-emerald-600 shadow-sm dark:bg-zinc-900" : "text-zinc-500"}`}
           >
             Danh mục thu
           </button>
         </div>
         <Button
-          size="sm"
           icon="add"
           className="w-full"
           onClick={() => {
@@ -90,23 +97,54 @@ export default function CategoriesPage() {
         </Button>
       </div>
 
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <TextInput
+            icon="search"
+            placeholder="Tìm kiếm danh mục..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <button
+          onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+          className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300"
+          aria-label={
+            sortDir === "asc"
+              ? "Đang sắp xếp A-Z, chạm để đổi sang Z-A"
+              : "Đang sắp xếp Z-A, chạm để đổi sang A-Z"
+          }
+          title={sortDir === "asc" ? "A-Z" : "Z-A"}
+        >
+          <Icon name={sortDir === "asc" ? "sort_az" : "sort_za"} size={19} />
+        </button>
+      </div>
+
       {loading ? (
         <TableSkeleton />
       ) : list.length === 0 ? (
         <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-          <EmptyState
-            icon="category"
-            text="Chưa có danh mục nào."
-            action={{
-              label: "Thêm danh mục",
-              onClick: () => setFormOpen(true),
-            }}
-          />
+          {search.trim() ? (
+            <EmptyState
+              icon="search_off"
+              text={`Không tìm thấy danh mục nào khớp với "${search.trim()}".`}
+              action={{ label: "Xóa tìm kiếm", onClick: () => setSearch("") }}
+            />
+          ) : (
+            <EmptyState
+              icon="category"
+              text="Chưa có danh mục nào."
+              action={{
+                label: "Thêm danh mục",
+                onClick: () => setFormOpen(true),
+              }}
+            />
+          )}
         </div>
       ) : (
         <>
           <p className="px-1 text-xs text-zinc-400">
-            Vuốt phải để sửa · vuốt trái để xóa · chạm để xem chi tiết
+            Vuốt phải để sửa · vuốt trái để xóa
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {list.map((c, idx) => (
