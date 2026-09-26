@@ -350,7 +350,7 @@ export default function TransactionsPage() {
               {groups.map((group) => (
                 <div key={dayKey(group.date)}>
                   <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                    <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-400">
+                    <h3 className="font-bold uppercase tracking-wide text-zinc-400">
                       {formatDayHeader(group.date)}
                     </h3>
 
@@ -359,7 +359,7 @@ export default function TransactionsPage() {
                       {group.expense > 0 && <span className="text-rose-500">-{formatMoney(group.expense)}</span>}
                     </div> */}
 
-                    <div className="flex shrink-0 items-center gap-2 font-semibold tabular-nums">
+                    <div className="flex shrink-0 items-center gap-2 font-bold tabular-nums">
                       {(group.income > 0 || group.expense > 0) && (
                         <span
                           className={

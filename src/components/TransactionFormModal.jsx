@@ -69,7 +69,7 @@ export default function TransactionFormModal({ open, onClose, editingTx }) {
       emoji: getCategoryEmoji(c),
       color: c.color,
     }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+    .sort((a, b) => a.name.localeCompare(b.name, "vi"));
 
   const walletOptions = wallets
     .map((w) => ({
@@ -78,7 +78,7 @@ export default function TransactionFormModal({ open, onClose, editingTx }) {
       icon: w.icon,
       color: w.color,
     }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+    .sort((a, b) => a.name.localeCompare(b.name, "vi"));
 
   function setType(type) {
     setForm((f) => ({ ...f, type, categoryId: "" }));
@@ -156,7 +156,11 @@ export default function TransactionFormModal({ open, onClose, editingTx }) {
         </div>
       }
     >
-      <form id="transaction-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form
+        id="transaction-form"
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-5"
+      >
         <div className="grid grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
           <button
             type="button"
@@ -205,9 +209,9 @@ export default function TransactionFormModal({ open, onClose, editingTx }) {
                     <span className="font-semibold tabular-nums text-zinc-500">
                       {formatNumber(r.amount)}đ
                     </span>
-                    {wallet && (
+                    {/* {wallet && (
                       <span className="text-zinc-400">· {wallet.name}</span>
-                    )}
+                    )} */}
                   </button>
                 );
               })}

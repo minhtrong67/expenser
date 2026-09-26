@@ -13,7 +13,7 @@ export default function Topbar({
     THEME_MODES.find((m) => m.id === settings.themeMode) || THEME_MODES[2];
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-zinc-100 bg-white/80 px-4 py-4 backdrop-blur sm:px-6 lg:px-8 dark:border-zinc-800 dark:bg-zinc-950/80">
+    <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-zinc-100 bg-white/80 px-4 py-4 backdrop-blur sm:px-6 lg:px-8 dark:border-zinc-800 dark:bg-neutral-900/80">
       <div className="flex min-w-0 items-center gap-2.5">
         <button
           onClick={onMenuClick}

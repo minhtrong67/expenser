@@ -28,7 +28,7 @@ html {
 }
 
 html.dark {
-  --toast-bg: 30 41 59;
+  --toast-bg: 64 64 64;
   --toast-fg: 241 245 249;
   --toast-border: 51 65 85;
   color-scheme: dark;
@@ -36,7 +36,14 @@ html.dark {
 
 body {
   @apply bg-zinc-50 text-zinc-900 antialiased;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
 }
 
 .dark body {
@@ -47,9 +54,17 @@ body {
   scrollbar-width: thin;
   scrollbar-color: rgb(161 161 170 / 0.4) transparent;
 }
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: rgb(161 161 170 / 0.4); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: rgb(161 161 170 / 0.6); }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(161 161 170 / 0.4);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(161 161 170 / 0.6);
+}
 
 .skeleton {
   position: relative;
@@ -60,15 +75,25 @@ body {
   background: rgb(39 39 42);
 }
 .skeleton::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.5), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.5),
+    transparent
+  );
   background-size: 400px 100%;
   animation: shimmer 1.6s infinite linear;
 }
 .dark .skeleton::after {
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.08), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.08),
+    transparent
+  );
 }
 
 :focus-visible {
@@ -78,19 +103,21 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
 }
 
-input[type='number']::-webkit-outer-spin-button,
-input[type='number']::-webkit-inner-spin-button {
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-input[type='number'] {
+input[type="number"] {
   -moz-appearance: textfield;
 }
 
