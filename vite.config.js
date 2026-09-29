@@ -19,6 +19,15 @@ export default defineConfig({
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#16A34A',
+        // Dark-mode override for the manifest's static splash-screen colors.
+        // Not yet universally supported (Chromium/WebKit are still rolling
+        // it out), but browsers that don't recognize it simply ignore it -
+        // the light values above remain the fallback, so this is purely
+        // additive and safe to ship ahead of full support.
+        color_scheme_dark: {
+          background_color: '#09090b',
+          theme_color: '#09090b',
+        },
         orientation: 'portrait-primary',
         icons: [
           { src: '/icons/icon-72.png', sizes: '72x72', type: 'image/png' },

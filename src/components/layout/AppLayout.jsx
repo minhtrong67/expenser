@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
@@ -6,6 +6,7 @@ import Topbar from "./Topbar";
 import CommandPalette from "./CommandPalette";
 import TransactionFormModal from "../TransactionFormModal";
 import ScrollToTop from "../ui/ScrollToTop";
+import RouteFallback from "../ui/RouteFallback";
 import { NAV_ITEMS } from "./navConfig";
 
 export default function AppLayout() {
@@ -54,7 +55,9 @@ export default function AppLayout() {
           onMenuClick={() => setSidebarOpen((o) => !o)}
         />
         <main className="flex-1 px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-10">
-          <Outlet context={{ openAddTx }} />
+          <Suspense fallback={<RouteFallback />}>
+            <Outlet context={{ openAddTx }} />
+          </Suspense>
         </main>
       </div>
       <MobileNav onAddClick={openAddTx} />

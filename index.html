@@ -9,6 +9,34 @@
     <meta name="theme-color" content="#ffffff" />
     <meta name="color-scheme" content="light dark" />
 
+    <!--
+      Applies the user's saved theme (or system preference) to <html> and to
+      the theme-color meta tag synchronously, before the stylesheet/app even
+      loads. Without this, the page always paints light-first and only
+      switches to dark once React mounts and SettingsContext's effect runs -
+      which is the white flash seen when opening the installed PWA in dark
+      mode. Kept in sync with SettingsContext.jsx's storage key/logic.
+    -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('qlct:settings');
+          var mode = raw ? JSON.parse(raw).themeMode || 'system' : 'system';
+          var prefersDark =
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = mode === 'dark' || (mode === 'system' && prefersDark);
+          if (dark) {
+            document.documentElement.classList.add('dark');
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', '#09090b');
+          }
+        } catch (e) {
+          /* localStorage unavailable (privacy mode, etc.) - fall back to light */
+        }
+      })();
+    </script>
+
     <title>Expenser — Quản lý chi tiêu cá nhân</title>
     <meta name="description" content="Expenser - ứng dụng quản lý chi tiêu cá nhân: theo dõi thu chi, ví và thống kê chi tiêu." />
     <meta name="keywords" content="quản lý chi tiêu, quản lý thu chi, sổ thu chi, ứng dụng tài chính cá nhân, expense tracker, personal finance app" />

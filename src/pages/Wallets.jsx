@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import Icon from "../components/ui/Icon";
 import Button from "../components/ui/Button";
@@ -23,13 +23,21 @@ export default function WalletsPage() {
 
   const total = wallets.reduce((s, w) => s + (Number(w.balance) || 0), 0);
 
+  // Precompute once per transactions change instead of re-scanning the
+  // full list for every wallet card on every render.
+  const usageByWallet = useMemo(() => {
+    const map = new Map();
+    const bump = (id) => id && map.set(id, (map.get(id) || 0) + 1);
+    transactions.forEach((t) => {
+      bump(t.walletId);
+      bump(t.fromWalletId);
+      bump(t.toWalletId);
+    });
+    return map;
+  }, [transactions]);
+
   function usageCount(walletId) {
-    return transactions.filter(
-      (t) =>
-        t.walletId === walletId ||
-        t.fromWalletId === walletId ||
-        t.toWalletId === walletId,
-    ).length;
+    return usageByWallet.get(walletId) || 0;
   }
 
   async function handleDelete() {

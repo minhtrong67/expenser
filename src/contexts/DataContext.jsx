@@ -112,9 +112,15 @@ export function DataProvider({ children }) {
   }, [uid]);
 
   // ---------- Transactions ----------
+  // Each of these combines the transaction write + wallet balance update
+  // into a single writeBatch so it's one network round-trip instead of
+  // 2-3 sequential awaited calls (this was the main cause of add/edit/
+  // delete feeling slow).
   const addTransaction = useCallback(async (payload) => {
     if (!uid) return;
-    const ref = await addDoc(col(uid, 'transactions'), {
+    const batch = writeBatch(db);
+    const ref = doc(col(uid, 'transactions'));
+    batch.set(ref, {
       type: payload.type,
       amount: Number(payload.amount),
       categoryId: payload.categoryId,
@@ -124,15 +130,17 @@ export function DataProvider({ children }) {
       createdAt: serverTimestamp(),
     });
     const sign = payload.type === 'income' ? 1 : -1;
-    await updateDoc(doc(db, 'users', uid, 'wallets', payload.walletId), {
+    batch.update(doc(db, 'users', uid, 'wallets', payload.walletId), {
       balance: increment(sign * Number(payload.amount)),
     });
+    await batch.commit();
     return ref.id;
   }, [uid]);
 
   const updateTransaction = useCallback(async (id, payload, previous) => {
     if (!uid) return;
-    await updateDoc(doc(db, 'users', uid, 'transactions', id), {
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'users', uid, 'transactions', id), {
       type: payload.type,
       amount: Number(payload.amount),
       categoryId: payload.categoryId,
@@ -140,26 +148,32 @@ export function DataProvider({ children }) {
       date: Timestamp.fromDate(new Date(payload.date)),
       note: (payload.note || '').trim(),
     });
-    // revert previous wallet effect
+    // Net the balance change per wallet so a same-wallet edit is a single
+    // increment instead of two separate writes to the same document.
+    const deltas = {};
     if (previous) {
       const prevSign = previous.type === 'income' ? -1 : 1;
-      await updateDoc(doc(db, 'users', uid, 'wallets', previous.walletId), {
-        balance: increment(prevSign * Number(previous.amount)),
-      });
+      deltas[previous.walletId] = (deltas[previous.walletId] || 0) + prevSign * Number(previous.amount);
     }
     const sign = payload.type === 'income' ? 1 : -1;
-    await updateDoc(doc(db, 'users', uid, 'wallets', payload.walletId), {
-      balance: increment(sign * Number(payload.amount)),
+    deltas[payload.walletId] = (deltas[payload.walletId] || 0) + sign * Number(payload.amount);
+    Object.entries(deltas).forEach(([walletId, delta]) => {
+      if (delta !== 0) {
+        batch.update(doc(db, 'users', uid, 'wallets', walletId), { balance: increment(delta) });
+      }
     });
+    await batch.commit();
   }, [uid]);
 
   const deleteTransaction = useCallback(async (tx) => {
     if (!uid) return;
-    await deleteDoc(doc(db, 'users', uid, 'transactions', tx.id));
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'users', uid, 'transactions', tx.id));
     const revertSign = tx.type === 'income' ? -1 : 1;
-    await updateDoc(doc(db, 'users', uid, 'wallets', tx.walletId), {
+    batch.update(doc(db, 'users', uid, 'wallets', tx.walletId), {
       balance: increment(revertSign * Number(tx.amount)),
     });
+    await batch.commit();
   }, [uid]);
 
   const deleteTransactionsBulk = useCallback(async (txs) => {

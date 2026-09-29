@@ -37,14 +37,26 @@ export default function CategoriesPage() {
       );
   }, [categories, tab, search, sortDir]);
 
+  // Precompute usage stats once per transactions change instead of
+  // re-scanning the full transaction list for every category card on
+  // every render (O(n) x M cards -> O(n) total).
+  const usageByCategory = useMemo(() => {
+    const map = new Map();
+    transactions.forEach((t) => {
+      const entry = map.get(t.categoryId) || { count: 0, total: 0 };
+      entry.count += 1;
+      entry.total += t.amount;
+      map.set(t.categoryId, entry);
+    });
+    return map;
+  }, [transactions]);
+
   function usageCount(catId) {
-    return transactions.filter((t) => t.categoryId === catId).length;
+    return usageByCategory.get(catId)?.count || 0;
   }
 
   function usageTotal(catId) {
-    return transactions
-      .filter((t) => t.categoryId === catId)
-      .reduce((s, t) => s + t.amount, 0);
+    return usageByCategory.get(catId)?.total || 0;
   }
 
   async function handleDelete() {
