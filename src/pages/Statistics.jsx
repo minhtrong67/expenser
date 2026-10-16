@@ -1,154 +1,180 @@
-import { useMemo, useState } from "react";
-import toast from "react-hot-toast";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  LabelList,
-} from "recharts";
-import Icon from "../components/ui/Icon";
-import ExportMenu from "../components/ui/ExportMenu";
-import { ChartSkeleton } from "../components/ui/Skeleton";
-import { EmptyState } from "./Dashboard";
-import { useData } from "../contexts/DataContext";
-import {
-  formatMoney,
-  formatDateShort,
-  formatCompactMoney,
-} from "../utils/format";
-import { exportRangeReport } from "../utils/exportImport";
+import { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, PieChart, Pie, Cell, LineChart, Line, LabelList } from 'recharts';
+import Icon from '../components/ui/Icon';
+import IconButton from '../components/ui/IconButton';
+import Chip from '../components/ui/Chip';
+import ExportMenu from '../components/ui/ExportMenu';
+import EmptyState from '../components/ui/EmptyState';
+import { ChartSkeleton } from '../components/ui/Skeleton';
+import { useData } from '../contexts/DataContext';
+import { useI18n } from '../i18n';
+import { useSessionState } from '../hooks/useSessionState';
+import { useChartTheme } from '../hooks/useChartTheme';
+import { formatMoney, formatDateShort, formatCompactMoney, formatMonthYear, formatDayHeader } from '../utils/format';
 
-const RANGE_OPTIONS = [
-  { id: "today", label: "Hôm nay" },
-  { id: "week", label: "Tuần này" },
-  { id: "month", label: "Tháng này" },
-  { id: "year", label: "Năm nay" },
-  { id: "all", label: "Tất cả" },
-];
+const RANGES = ['today', 'week', 'month', 'year', 'all'];
+const DAY = 86_400_000;
 
-function getRange(id) {
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+// The period an anchor date falls into, for the chosen range.
+function getPeriod(range, anchorTs) {
+  const a = new Date(anchorTs);
   const now = new Date();
-  const start = new Date(now);
-  if (id === "today") {
-    start.setHours(0, 0, 0, 0);
-  } else if (id === "week") {
-    const day = (now.getDay() + 6) % 7; // Monday-based
-    start.setDate(now.getDate() - day);
-    start.setHours(0, 0, 0, 0);
-  } else if (id === "month") {
-    start.setDate(1);
-    start.setHours(0, 0, 0, 0);
-  } else if (id === "year") {
-    start.setMonth(0, 1);
-    start.setHours(0, 0, 0, 0);
+  let start;
+  let fullEnd;
+  if (range === 'today') {
+    start = startOfDay(a);
+    fullEnd = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59, 999);
+  } else if (range === 'week') {
+    const dow = (a.getDay() + 6) % 7; // Monday-based
+    start = new Date(a.getFullYear(), a.getMonth(), a.getDate() - dow);
+    fullEnd = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 23, 59, 59, 999);
+  } else if (range === 'month') {
+    start = new Date(a.getFullYear(), a.getMonth(), 1);
+    fullEnd = new Date(a.getFullYear(), a.getMonth() + 1, 0, 23, 59, 59, 999);
+  } else if (range === 'year') {
+    start = new Date(a.getFullYear(), 0, 1);
+    fullEnd = new Date(a.getFullYear(), 11, 31, 23, 59, 59, 999);
   } else {
-    return { start: new Date(0), end: now };
+    start = new Date(0);
+    fullEnd = now;
   }
-  return { start, end: now };
+  return { start, fullEnd, end: fullEnd > now ? now : fullEnd, isCurrent: start <= now && fullEnd >= now };
+}
+
+function shiftAnchor(range, anchorTs, delta) {
+  const a = new Date(anchorTs);
+  if (range === 'today') return new Date(a.getFullYear(), a.getMonth(), a.getDate() + delta).getTime();
+  if (range === 'week') return new Date(a.getFullYear(), a.getMonth(), a.getDate() + 7 * delta).getTime();
+  if (range === 'month') return new Date(a.getFullYear(), a.getMonth() + delta, 1).getTime();
+  return new Date(a.getFullYear() + delta, 0, 1).getTime();
+}
+
+// Zero-filled buckets so the trend chart has no gaps: hours / days / months.
+function buildTrend(range, start, end, txs, monthsShort) {
+  const buckets = [];
+  let indexOf;
+  if (range === 'today') {
+    for (let h = 0; h < 24; h += 1) buckets.push({ key: `${String(h).padStart(2, '0')}h`, income: 0, expense: 0 });
+    indexOf = (d) => d.getHours();
+  } else if (range === 'week' || range === 'month') {
+    const s = startOfDay(start);
+    const n = Math.round((startOfDay(end) - s) / DAY) + 1;
+    for (let i = 0; i < n; i += 1) {
+      const d = new Date(s.getFullYear(), s.getMonth(), s.getDate() + i);
+      buckets.push({ key: range === 'month' ? String(d.getDate()) : formatDateShort(d), income: 0, expense: 0 });
+    }
+    indexOf = (d) => Math.round((startOfDay(d) - s) / DAY);
+  } else {
+    const first = range === 'year' ? new Date(start.getFullYear(), 0, 1) : new Date(Math.min(...txs.map((x) => x.date.getTime()), end.getTime()));
+    const base = first.getFullYear() * 12 + first.getMonth();
+    const last = end.getFullYear() * 12 + end.getMonth();
+    for (let m = base; m <= last; m += 1) {
+      buckets.push({ key: range === 'year' ? monthsShort[m % 12] : `${String((m % 12) + 1).padStart(2, '0')}/${String(Math.floor(m / 12)).slice(2)}`, income: 0, expense: 0 });
+    }
+    indexOf = (d) => d.getFullYear() * 12 + d.getMonth() - base;
+  }
+  txs.forEach((tx) => {
+    const b = buckets[indexOf(tx.date)];
+    if (b) b[tx.type === 'income' ? 'income' : 'expense'] += tx.amount;
+  });
+  return buckets;
+}
+
+function ChartCard({ title, subtitle, children }) {
+  return (
+    <section className="animate-fade-in rounded-2xl bg-surface-container-low p-5">
+      <div className="mb-4">
+        <h3 className="text-title-md text-on-surface">{title}</h3>
+        {subtitle && <p className="mt-0.5 wrap-any text-body-sm text-on-surface-variant">{subtitle}</p>}
+      </div>
+      {children}
+    </section>
+  );
 }
 
 export default function StatisticsPage() {
-  const { transactions, categories, getCategory, getWallet, loading } =
-    useData();
-  const [range, setRange] = useState("month");
+  const { t } = useI18n();
+  const chart = useChartTheme();
+  const { transactions, categories, getCategory, getWallet, loading } = useData();
+  // Remembered across page changes (sessionStorage); the anchor is a timestamp.
+  const [range, setRange] = useSessionState('statistics.range', 'month');
+  const [anchorTs, setAnchorTs] = useSessionState('statistics.anchor', () => Date.now());
+  const [exporting, setExporting] = useState(null);
 
-  const { start, end } = getRange(range);
+  // Memoised so downstream useMemo's really are cached (fresh Date objects every render defeated them).
+  const period = useMemo(() => getPeriod(range, anchorTs), [range, anchorTs]);
+  const { start, end, fullEnd, isCurrent } = period;
+  const monthsShort = useMemo(() => t('stats.monthsShort').split(','), [t]);
+  const hasNav = range !== 'all';
+  const canGoNext = !isCurrent;
 
-  async function handleExportRange(format) {
-    if (filtered.length === 0) {
-      toast.error(
-        "Không có dữ liệu trong khoảng thời gian này để xuất báo cáo.",
-      );
-      return;
-    }
-    const rangeLabel =
-      RANGE_OPTIONS.find((r) => r.id === range)?.label || "Báo cáo";
-    try {
-      await exportRangeReport({
-        title: rangeLabel,
-        start,
-        end,
-        transactions,
-        categories,
-        getCategory,
-        getWallet,
-        format,
-      });
-      toast.success("Đã xuất báo cáo.");
-    } catch (err) {
-      console.error(err);
-      toast.error("Không thể xuất báo cáo. Vui lòng thử lại.");
-    }
-  }
+  const periodLabel = useMemo(() => {
+    const a = new Date(anchorTs);
+    if (range === 'today') return isCurrent ? t('stats.todayLabel', { date: formatDateShort(a) }) : formatDayHeader(a);
+    if (range === 'week') return `${formatDateShort(start)} – ${formatDateShort(fullEnd)}/${fullEnd.getFullYear()}`;
+    if (range === 'month') return formatMonthYear(a);
+    if (range === 'year') return t('stats.yearLabel', { year: a.getFullYear() });
+    return t('stats.range.all');
+  }, [range, anchorTs, start, fullEnd, isCurrent, t]);
 
-  const filtered = useMemo(
-    () =>
-      transactions.filter(
-        (t) => t.type !== "transfer" && t.date >= start && t.date <= end,
-      ),
-    [transactions, start, end],
-  );
+  const shift = (delta) => {
+    if (delta > 0 && !canGoNext) return;
+    setAnchorTs((ts) => shiftAnchor(range, ts, delta));
+  };
+
+  const filtered = useMemo(() => transactions.filter((tx) => tx.type !== 'transfer' && tx.date >= start && tx.date <= end), [transactions, start, end]);
 
   const totals = useMemo(() => {
-    const income = filtered
-      .filter((t) => t.type === "income")
-      .reduce((s, t) => s + t.amount, 0);
-    const expense = filtered
-      .filter((t) => t.type === "expense")
-      .reduce((s, t) => s + t.amount, 0);
+    let income = 0;
+    let expense = 0;
+    filtered.forEach((tx) => {
+      if (tx.type === 'income') income += tx.amount;
+      else expense += tx.amount;
+    });
     return { income, expense, net: income - expense };
   }, [filtered]);
 
   const categoryData = useMemo(() => {
     const map = {};
-    filtered
-      .filter((t) => t.type === "expense")
-      .forEach((t) => {
-        map[t.categoryId] = (map[t.categoryId] || 0) + t.amount;
-      });
+    filtered.forEach((tx) => {
+      if (tx.type === 'expense') map[tx.categoryId] = (map[tx.categoryId] || 0) + tx.amount;
+    });
     const total = Object.values(map).reduce((a, b) => a + b, 0);
     return Object.entries(map)
       .map(([id, value]) => {
         const cat = getCategory(id);
-        return {
-          name: cat?.name || "Khác",
-          value,
-          color: cat?.color || "#94A3B8",
-          pct: total ? Math.round((value / total) * 100) : 0,
-        };
+        return { name: cat?.name || t('common.other'), value, color: cat?.color || '#94A3B8', pct: total ? Math.round((value / total) * 100) : 0 };
       })
       .sort((a, b) => b.value - a.value);
-  }, [filtered, getCategory]);
+  }, [filtered, getCategory, t]);
 
-  const trendData = useMemo(() => {
-    const map = {};
-    filtered.forEach((t) => {
-      const key =
-        range === "year" || range === "all"
-          ? `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, "0")}`
-          : formatDateShort(t.date);
-      if (!map[key])
-        map[key] = { key, thu: 0, chi: 0, order: t.date.getTime() };
-      if (t.type === "income") map[key].thu += t.amount;
-      else map[key].chi += t.amount;
-    });
-    return Object.values(map).sort((a, b) => a.order - b.order);
-  }, [filtered, range]);
+  const trendData = useMemo(() => buildTrend(range, start, end, filtered, monthsShort), [range, start, end, filtered, monthsShort]);
 
   const incomeVsExpense = [
-    { name: "Thu nhập", value: totals.income, fill: "#10B981" },
-    { name: "Chi tiêu", value: totals.expense, fill: "#F43F5E" },
+    { name: t('tx.income'), value: totals.income, fill: chart.income },
+    { name: t('tx.expense'), value: totals.expense, fill: chart.expense },
   ];
+
+  async function handleExport(format) {
+    if (filtered.length === 0) {
+      toast.error(t('stats.exportEmpty'));
+      return;
+    }
+    setExporting(format);
+    try {
+      const { exportRangeReport } = await import('../utils/exportImport');
+      await exportRangeReport({ title: periodLabel, start, end, transactions, categories, getCategory, getWallet, format, t });
+      toast.success(t('stats.exported'));
+    } catch (err) {
+      console.error(err);
+      toast.error(t('stats.exportError'));
+    } finally {
+      setExporting(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -159,219 +185,106 @@ export default function StatisticsPage() {
     );
   }
 
+  const axisTick = (v) => formatCompactMoney(v);
+
   return (
-    <div className="space-y-5 animate-fade-in">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-          {RANGE_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => setRange(opt.id)}
-              className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-                range === opt.id
-                  ? "border-accent-500 bg-accent-50 text-accent-700 dark:border-accent-500/50 dark:bg-accent-500/10 dark:text-accent-400"
-                  : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
-              }`}
-            >
-              {opt.label}
-            </button>
+    <div className="space-y-4 sm:space-y-5">
+      <div className="space-y-3">
+        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0" role="group" aria-label={t('stats.rangeLabel')}>
+          {RANGES.map((id) => (
+            <Chip key={id} selected={range === id} onClick={() => setRange(id)}>
+              {t(`stats.range.${id}`)}
+            </Chip>
           ))}
         </div>
-        <ExportMenu
-          label={`Xuất báo cáo ${RANGE_OPTIONS.find((r) => r.id === range)?.label.toLowerCase()}`}
-          onSelect={handleExportRange}
-        />
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {hasNav && (
+            <div className="flex flex-1 items-center justify-between rounded-full bg-surface-container-low p-1.5">
+              <IconButton icon="chevron_left" label={t('stats.prev')} variant="tonal" onClick={() => shift(-1)} />
+              <button onClick={() => setAnchorTs(Date.now())} disabled={isCurrent} className="state-layer flex min-w-0 flex-col items-center rounded-full px-4 py-1 disabled:pointer-events-none">
+                <span className="wrap-any text-title-sm font-bold text-on-surface">{periodLabel}</span>
+                {!isCurrent && <span className="text-label-sm text-primary">{t('stats.backToCurrent')}</span>}
+              </button>
+              <IconButton icon="chevron_right" label={t('stats.next')} variant="tonal" onClick={() => shift(1)} disabled={!canGoNext} />
+            </div>
+          )}
+          <ExportMenu
+            label={t('stats.export')}
+            busyId={exporting}
+            onSelect={handleExport}
+            formats={[
+              { id: 'excel', label: 'Excel (.xlsx)', icon: 'table_view' },
+              { id: 'pdf', label: 'PDF', icon: 'picture_as_pdf' },
+              { id: 'image', label: t('stats.exportImage'), icon: 'image' },
+            ]}
+            className="sm:w-56"
+          />
+        </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent-600 to-accent-700 p-5 text-white shadow-lg shadow-accent-600/20 sm:p-6">
-        <div className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
-        <div className="absolute -bottom-12 -left-8 h-36 w-36 rounded-full bg-white/10" />
+      <section className="relative overflow-hidden rounded-3xl bg-primary-container p-5 text-on-primary-container sm:p-6">
+        <div className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-primary/10" />
+        <div className="absolute -bottom-12 -left-8 h-36 w-36 rounded-full bg-primary/10" />
         <div className="relative grid grid-cols-3 gap-3 sm:gap-6">
           <div className="min-w-0">
-            <p className="flex items-center gap-1 text-[11px] text-white/70 sm:text-xs">
-              <Icon name="receipt_long" size={13} /> Giao dịch
+            <p className="flex items-center gap-1 text-label-md opacity-80">
+              <Icon name="receipt_long" size={13} /> {t('stats.transactions')}
             </p>
-            <p className="mt-1.5 text-2xl font-extrabold tabular-nums sm:text-4xl">
-              {filtered.length}
-            </p>
+            <p className="mt-1.5 text-title-lg font-bold tabular-nums sm:text-headline-md">{filtered.length}</p>
           </div>
           <div className="min-w-0">
-            <p className="flex items-center gap-1 text-[11px] text-white/70 sm:text-xs">
-              <Icon name="arrow_upward" size={13} /> Thu nhập
+            <p className="flex items-center gap-1 text-label-md opacity-80">
+              <Icon name="arrow_upward" size={13} /> {t('tx.income')}
             </p>
-            <p className="mt-1.5 truncate text-lg font-extrabold tabular-nums text-emerald-200 sm:text-3xl">
-              {formatMoney(totals.income)}
-            </p>
+            <p className="mt-1.5 wrap-any text-title-sm font-bold tabular-nums leading-tight sm:text-title-lg lg:text-headline-sm">{formatMoney(totals.income)}</p>
           </div>
           <div className="min-w-0">
-            <p className="flex items-center gap-1 text-[11px] text-white/70 sm:text-xs">
-              <Icon name="arrow_downward" size={13} /> Chi tiêu
+            <p className="flex items-center gap-1 text-label-md opacity-80">
+              <Icon name="arrow_downward" size={13} /> {t('tx.expense')}
             </p>
-            <p className="mt-1.5 truncate text-lg font-extrabold tabular-nums text-rose-200 sm:text-3xl">
-              {formatMoney(totals.expense)}
-            </p>
+            <p className="mt-1.5 wrap-any text-title-sm font-bold tabular-nums leading-tight sm:text-title-lg lg:text-headline-sm">{formatMoney(totals.expense)}</p>
           </div>
         </div>
-        <div className="relative mt-4 flex items-center gap-2 border-t border-white/15 pt-3.5 text-sm font-semibold sm:text-base">
-          <Icon
-            name={totals.net >= 0 ? "trending_up" : "trending_down"}
-            size={18}
-          />
-          Chênh lệch:{" "}
-          <span className="tabular-nums">{formatMoney(totals.net)}</span>
+        <div className="relative mt-4 flex items-center gap-2 border-t border-on-primary-container/20 pt-3.5 text-title-sm">
+          <Icon name={totals.net >= 0 ? 'trending_up' : 'trending_down'} size={18} />
+          {t('stats.difference')}: <span className="font-bold tabular-nums">{formatMoney(totals.net)}</span>
         </div>
-      </div>
+      </section>
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-          <EmptyState
-            icon="bar_chart"
-            text="Không có dữ liệu trong khoảng thời gian này."
-          />
+        <div className="rounded-2xl bg-surface-container-low">
+          <EmptyState icon="bar_chart" text={t('stats.noData')} />
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <ChartCard
-              title="Xu hướng thu chi"
-              subtitle={`Tổng thu ${formatMoney(totals.income)} · Tổng chi ${formatMoney(totals.expense)}`}
-            >
+            <ChartCard title={t('stats.trend')} subtitle={`${t('stats.totalIncome')} ${formatMoney(totals.income)} · ${t('stats.totalExpense')} ${formatMoney(totals.expense)}`}>
               <ResponsiveContainer width="100%" height={280}>
-                <LineChart
-                  data={trendData}
-                  margin={{ left: 4, right: 8, top: 8 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    className="text-zinc-100 dark:text-zinc-800"
-                    stroke="currentColor"
-                  />
-                  <XAxis
-                    dataKey="key"
-                    tick={{ fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tickFormatter={(v) =>
-                      v >= 1000000
-                        ? `${v / 1000000}tr`
-                        : v >= 1000
-                          ? `${v / 1000}k`
-                          : v
-                    }
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={44}
-                    label={{
-                      value: "Số tiền (đ)",
-                      angle: -90,
-                      position: "insideLeft",
-                      style: { fontSize: 10, fill: "#94a3b8" },
-                    }}
-                  />
-                  <Tooltip
-                    formatter={(v) => formatMoney(v)}
-                    contentStyle={{ borderRadius: 12, fontSize: 12 }}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: 12 }}
-                    formatter={(value) => (
-                      <span className="text-zinc-600 dark:text-zinc-300">
-                        {value}
-                      </span>
-                    )}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="thu"
-                    name="Thu nhập"
-                    stroke="#10B981"
-                    strokeWidth={2.5}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="chi"
-                    name="Chi tiêu"
-                    stroke="#F43F5E"
-                    strokeWidth={2.5}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
-                    isAnimationActive={false}
-                  />
+                <LineChart data={trendData} margin={{ left: 0, right: 8, top: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chart.grid} />
+                  <XAxis dataKey="key" tick={chart.tick} tickLine={false} axisLine={false} minTickGap={12} />
+                  <YAxis tickFormatter={axisTick} tick={chart.tick} tickLine={false} axisLine={false} width={44} />
+                  <Tooltip {...chart.tooltip} formatter={(v) => formatMoney(v)} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Line type="monotone" dataKey="income" name={t('tx.income')} stroke={chart.income} strokeWidth={2.5} dot={trendData.length <= 31 ? { r: 3 } : false} activeDot={{ r: 5 }} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="expense" name={t('tx.expense')} stroke={chart.expense} strokeWidth={2.5} dot={trendData.length <= 31 ? { r: 3 } : false} activeDot={{ r: 5 }} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard
-              title="So sánh thu / chi"
-              subtitle={`Chênh lệch ${totals.net >= 0 ? "+" : ""}${formatMoney(totals.net)}`}
-            >
+            <ChartCard title={t('stats.compare')} subtitle={`${t('stats.difference')} ${totals.net >= 0 ? '+' : ''}${formatMoney(totals.net)}`}>
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart
-                  data={incomeVsExpense}
-                  margin={{ left: 4, right: 8, top: 20 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    className="text-zinc-100 dark:text-zinc-800"
-                    stroke="currentColor"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 12 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tickFormatter={(v) =>
-                      v >= 1000000
-                        ? `${v / 1000000}tr`
-                        : v >= 1000
-                          ? `${v / 1000}k`
-                          : v
-                    }
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={44}
-                    label={{
-                      value: "Số tiền (đ)",
-                      angle: -90,
-                      position: "insideLeft",
-                      style: { fontSize: 10, fill: "#94a3b8" },
-                    }}
-                  />
-                  <Tooltip
-                    formatter={(v) => formatMoney(v)}
-                    contentStyle={{ borderRadius: 12, fontSize: 12 }}
-                  />
-                  <Bar
-                    dataKey="value"
-                    name="Số tiền"
-                    radius={[8, 8, 0, 0]}
-                    isAnimationActive={false}
-                  >
+                <BarChart data={incomeVsExpense} margin={{ left: 0, right: 8, top: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chart.grid} />
+                  <XAxis dataKey="name" tick={{ ...chart.tick, fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis tickFormatter={axisTick} tick={chart.tick} tickLine={false} axisLine={false} width={44} />
+                  <Tooltip {...chart.tooltip} cursor={chart.cursor} formatter={(v) => formatMoney(v)} />
+                  <Bar dataKey="value" name={t('tx.amount')} radius={[12, 12, 0, 0]} isAnimationActive={false}>
                     {incomeVsExpense.map((entry, i) => (
                       <Cell key={i} fill={entry.fill} />
                     ))}
-                    <LabelList
-                      dataKey="value"
-                      position="top"
-                      formatter={(v) => formatCompactMoney(v)}
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        fill: "currentColor",
-                      }}
-                      className="text-zinc-600 dark:text-zinc-300"
-                    />
+                    <LabelList dataKey="value" position="top" formatter={(v) => formatCompactMoney(v)} style={{ fontSize: 11, fontWeight: 600, fill: chart.tick.fill }} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -379,117 +292,51 @@ export default function StatisticsPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <ChartCard
-              title="Phân bổ chi tiêu theo danh mục"
-              subtitle={
-                categoryData.length > 0
-                  ? `Tổng ${formatMoney(totals.expense)} · ${categoryData.length} danh mục`
-                  : undefined
-              }
-            >
+            <ChartCard title={t('stats.pie')} subtitle={categoryData.length > 0 ? t('stats.pieSubtitle', { total: formatMoney(totals.expense), n: categoryData.length }) : undefined}>
               {categoryData.length === 0 ? (
-                <EmptyState
-                  icon="donut_large"
-                  text="Chưa có chi tiêu trong khoảng thời gian này."
-                />
+                <EmptyState icon="donut_large" text={t('stats.noExpense')} />
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie
-                      data={categoryData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={55}
-                      outerRadius={90}
-                      paddingAngle={2}
-                      isAnimationActive={false}
-                      label={({ pct }) => `${pct}%`}
-                      labelLine={false}
-                      style={{ fontSize: 11, fontWeight: 600 }}
-                    >
+                    <Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={92} paddingAngle={2} stroke="none" isAnimationActive={false} label={({ pct }) => (pct >= 4 ? `${pct}%` : '')} labelLine={false} style={{ fontSize: 11, fontWeight: 600 }}>
                       {categoryData.map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip
-                      formatter={(v, n, { payload }) => [
-                        `${formatMoney(v)} (${payload.pct}%)`,
-                        payload.name,
-                      ]}
-                      contentStyle={{ borderRadius: 12, fontSize: 12 }}
-                    />
-                    <Legend
-                      wrapperStyle={{ fontSize: 11 }}
-                      formatter={(value) => (
-                        <span className="text-zinc-600 dark:text-zinc-300">
-                          {value}
-                        </span>
-                      )}
-                    />
+                    <Tooltip {...chart.tooltip} formatter={(v, n, { payload }) => [`${formatMoney(v)} (${payload.pct}%)`, payload.name]} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
             </ChartCard>
 
-            <ChartCard
-              title="Chi tiêu theo danh mục (%)"
-              subtitle={
-                categoryData.length > 0
-                  ? `Cao nhất: ${categoryData[0].name} (${categoryData[0].pct}%)`
-                  : undefined
-              }
-            >
+            <ChartCard title={t('stats.categoryPct')} subtitle={categoryData.length > 0 ? t('stats.highest', { name: categoryData[0].name, pct: categoryData[0].pct }) : undefined}>
               {categoryData.length === 0 ? (
-                <EmptyState icon="bar_chart" text="Chưa có dữ liệu." />
+                <EmptyState icon="bar_chart" text={t('common.noData')} />
               ) : (
-                <div className="space-y-3">
+                <ul className="space-y-3">
                   {categoryData.map((c) => (
-                    <div key={c.name}>
-                      <div className="mb-1 flex items-center justify-between text-xs">
-                        <span className="flex items-center gap-1.5 font-medium text-zinc-600 dark:text-zinc-300">
-                          <span
-                            className="h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: c.color }}
-                          />
-                          {c.name}
+                    <li key={c.name}>
+                      <div className="mb-1 flex items-center justify-between gap-2 text-body-sm">
+                        <span className="flex min-w-0 items-center gap-1.5 font-medium text-on-surface">
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
+                          <span className="wrap-any">{c.name}</span>
                         </span>
-                        <span className="tabular-nums text-zinc-400">
+                        <span className="shrink-0 tabular-nums text-on-surface-variant">
                           {formatMoney(c.value)} · {c.pct}%
                         </span>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${c.pct}%`,
-                            backgroundColor: c.color,
-                          }}
-                        />
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-surface-container-highest">
+                        <div className="h-full rounded-full transition-[width] duration-500 ease-emphasized" style={{ width: `${c.pct}%`, backgroundColor: c.color }} />
                       </div>
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </ChartCard>
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function ChartCard({ title, subtitle, children }) {
-  return (
-    <div className="animate-fade-in rounded-2xl border border-zinc-100 bg-white p-5 transition duration-200 hover:shadow-md hover:shadow-zinc-200/60 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:shadow-black/20">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-          {title}
-        </h3>
-        {subtitle && (
-          <p className="mt-0.5 truncate text-xs text-zinc-400">{subtitle}</p>
-        )}
-      </div>
-      {children}
     </div>
   );
 }

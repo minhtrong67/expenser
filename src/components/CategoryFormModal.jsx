@@ -4,49 +4,49 @@ import Modal from './ui/Modal';
 import Field from './ui/Field';
 import Button from './ui/Button';
 import TextInput from './ui/TextInput';
+import SegmentedButton from './ui/SegmentedButton';
 import { ColorPicker } from './ui/IconColorPicker';
 import EmojiPicker from './ui/EmojiPicker';
 import { useData } from '../contexts/DataContext';
+import { useT } from '../i18n';
 import { validateCategory, trimValue } from '../utils/validators';
 import { CATEGORY_COLORS } from '../utils/defaults';
 import { DEFAULT_CATEGORY_EMOJI, getCategoryEmoji } from '../utils/categoryEmoji';
 
 export default function CategoryFormModal({ open, onClose, editing, defaultType = 'expense' }) {
+  const t = useT();
   const { categories, addCategory, updateCategory } = useData();
-  const [form, setForm] = useState({ name: '', type: defaultType, emoji: DEFAULT_CATEGORY_EMOJI, color: CATEGORY_COLORS[0] });
+  const blank = { name: '', type: defaultType, emoji: DEFAULT_CATEGORY_EMOJI, color: CATEGORY_COLORS[0] };
+  const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setForm(
-        editing
-          ? { name: editing.name, type: editing.type, emoji: getCategoryEmoji(editing), color: editing.color }
-          : { name: '', type: defaultType, emoji: DEFAULT_CATEGORY_EMOJI, color: CATEGORY_COLORS[0] }
-      );
-      setErrors({});
-    }
+    if (!open) return;
+    setForm(editing ? { name: editing.name, type: editing.type, emoji: getCategoryEmoji(editing), color: editing.color } : { ...blank, type: defaultType });
+    setErrors({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing, defaultType]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     const payload = { ...form, name: trimValue(form.name) };
     const existingNames = categories.filter((c) => c.type === payload.type && c.id !== editing?.id).map((c) => c.name);
-    const { valid, errors: errs } = validateCategory(payload, existingNames);
+    const { valid, errors: errs } = validateCategory(payload, existingNames, t);
     setErrors(errs);
     if (!valid) return;
     setSaving(true);
     try {
       if (editing) {
         await updateCategory(editing.id, payload);
-        toast.success('Đã cập nhật danh mục.');
+        toast.success(t('cat.updated'));
       } else {
         await addCategory(payload);
-        toast.success('Đã thêm danh mục mới.');
+        toast.success(t('cat.added'));
       }
       onClose();
     } catch {
-      toast.error('Không thể lưu danh mục.');
+      toast.error(t('cat.saveError'));
     } finally {
       setSaving(false);
     }
@@ -56,49 +56,50 @@ export default function CategoryFormModal({ open, onClose, editing, defaultType 
     <Modal
       open={open}
       onClose={onClose}
-      title={editing ? 'Sửa danh mục' : 'Thêm danh mục'}
-      size="full"
+      title={editing ? t('cat.editTitle') : t('cat.addTitle')}
+      variant="sheet"
       footer={
-        <div className="flex gap-3">
-          <Button type="button" variant="outline-danger" icon="close" className="flex-1" onClick={onClose} disabled={saving}>Hủy</Button>
-          <Button type="submit" form="category-form" icon="check" className="flex-1" loading={saving}>{editing ? 'Lưu' : 'Thêm'}</Button>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="text" onClick={onClose} disabled={saving}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" form="category-form" icon="check" loading={saving}>
+            {editing ? t('common.save') : t('common.add')}
+          </Button>
         </div>
       }
     >
-      <form id="category-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
-          <button
-            type="button"
-            onClick={() => setForm((f) => ({ ...f, type: 'expense' }))}
-            className={`rounded-lg py-2 text-sm font-semibold transition ${form.type === 'expense' ? 'bg-white text-rose-600 shadow-sm dark:bg-zinc-900' : 'text-zinc-500'}`}
-          >
-            Danh mục chi
-          </button>
-          <button
-            type="button"
-            onClick={() => setForm((f) => ({ ...f, type: 'income' }))}
-            className={`rounded-lg py-2 text-sm font-semibold transition ${form.type === 'income' ? 'bg-white text-emerald-600 shadow-sm dark:bg-zinc-900' : 'text-zinc-500'}`}
-          >
-            Danh mục thu
-          </button>
+      <form id="category-form" onSubmit={handleSubmit} className="flex flex-col gap-5 pb-2" noValidate>
+        {/* The type is locked when editing: existing transactions rely on it. */}
+        <div className={editing ? 'pointer-events-none opacity-60' : ''}>
+          <SegmentedButton
+            ariaLabel={t('cat.type')}
+            value={form.type}
+            onChange={(type) => setForm((f) => ({ ...f, type }))}
+            options={[
+              { id: 'expense', label: t('cat.expenseTab'), activeClass: 'bg-expense-container text-on-expense-container' },
+              { id: 'income', label: t('cat.incomeTab'), activeClass: 'bg-income-container text-on-income-container' },
+            ]}
+          />
         </div>
 
-        <Field label="Tên danh mục" required error={errors.name}>
-          <TextInput
-            placeholder="Ví dụ: Ăn uống"
-            value={form.name}
-            maxLength={40}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            onBlur={(e) => setForm((f) => ({ ...f, name: e.target.value.trim() }))}
-            error={errors.name}
-          />
-        </Field>
+        <TextInput
+          label={t('cat.name')}
+          required
+          placeholder=" "
+          hint={t('cat.nameHint')}
+          value={form.name}
+          maxLength={40}
+          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          onBlur={(e) => setForm((f) => ({ ...f, name: e.target.value.trim() }))}
+          error={errors.name}
+        />
 
-        <Field label="Biểu tượng (emoji)">
+        <Field label={t('cat.emoji')}>
           <EmojiPicker value={form.emoji} onChange={(emoji) => setForm((f) => ({ ...f, emoji }))} />
         </Field>
 
-        <Field label="Màu sắc">
+        <Field label={t('common.color')}>
           <ColorPicker colors={CATEGORY_COLORS} value={form.color} onChange={(color) => setForm((f) => ({ ...f, color }))} />
         </Field>
       </form>

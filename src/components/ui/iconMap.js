@@ -9,6 +9,7 @@ import {
   PiggyBank, Clock, Search, SearchX, Settings, LineChart, LayoutDashboard,
   ClipboardList, TrendingUp, TrendingDown, SlidersHorizontal, FileUp, Eye, EyeOff,
   AlertTriangle, UserCircle, Landmark, ArrowDownAZ, ArrowDownZA,
+  Image, Languages, Globe, Sparkles, Code, ArrowLeft, CircleCheck, ArrowUpDown, ArrowDownUp, Pipette, ExternalLink,
 } from 'lucide-react';
 
 // Legacy string keys are the old Material Symbols names already used
@@ -66,6 +67,7 @@ const ICON_MAP = {
   mail: Mail,
   mark_email_read: MailCheck,
   menu: Menu,
+  open_in_new: ExternalLink,
   palette: Palette,
   pause_circle: PauseCircle,
   payments: Banknote,
@@ -88,6 +90,16 @@ const ICON_MAP = {
   summarize: ClipboardList,
   sort_az: ArrowDownAZ,
   sort_za: ArrowDownZA,
+  image: Image,
+  translate: Languages,
+  language: Globe,
+  auto_awesome: Sparkles,
+  code: Code,
+  arrow_back: ArrowLeft,
+  check_circle: CircleCheck,
+  swap_vert: ArrowUpDown,
+  sort_desc: ArrowDownUp,
+  colorize: Pipette,
   sync_alt: ArrowLeftRight,
   table_view: Table,
   trending_down: TrendingDown,

@@ -1,109 +1,163 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
-  useCallback,
-} from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage";
+} from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { I18nContext, LANGUAGES, createT, detectLanguage } from '../i18n';
+import { setFormatLocale } from '../utils/format';
+import {
+  DEFAULT_SCHEME,
+  DEFAULT_SEED,
+  applyRoles,
+  cacheScheme,
+  isValidHex,
+  readCachedScheme,
+} from '../theme';
 
 const SettingsContext = createContext(null);
 
-const FONT_SCALES = { sm: 0.9, md: 1, lg: 1.1, xl: 1.2 };
+const FONT_SCALES = { sm: 0.92, md: 1, lg: 1.1 };
 
 // Shared metadata for the 3 theme modes so any component (Topbar quick
-// toggle, Settings page selector, etc.) can stay in sync without
-// duplicating the icon/label mapping or the light -> dark -> system order.
+// toggle, Settings page selector, ...) stays in sync.
 export const THEME_MODES = [
-  { id: "light", label: "Sáng", icon: "light_mode" },
-  { id: "dark", label: "Tối", icon: "dark_mode" },
-  { id: "system", label: "Hệ thống", icon: "brightness_auto" },
+  { id: 'light', labelKey: 'settings.mode.light', icon: 'light_mode' },
+  { id: 'dark', labelKey: 'settings.mode.dark', icon: 'dark_mode' },
+  { id: 'system', labelKey: 'settings.mode.system', icon: 'brightness_auto' },
 ];
 
 const DEFAULT_SETTINGS = {
-  themeMode: "system", // light | dark | system
-  fontSize: "md", // sm | md | lg | xl
+  themeMode: 'system', // light | dark | system
+  fontSize: 'md', // sm | md | lg
+  language: detectLanguage(), // vi | en
+  seedColor: DEFAULT_SEED, // any #RRGGBB - the Material 3 scheme is derived from it
 };
 
 function getSystemPrefersDark() {
-  return (
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-  );
+  return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
 }
 
 export function SettingsProvider({ children }) {
-  const [settings, setSettings] = useLocalStorage(
-    "qlct:settings",
-    DEFAULT_SETTINGS,
-  );
-  const [systemDark, setSystemDark] = useState(getSystemPrefersDark());
+  const [stored, setStored] = useLocalStorage('qlct:settings', DEFAULT_SETTINGS);
+  // Old installs saved fewer fields (and a now-removed notification flag) -
+  // merge over the defaults so every field is always defined.
+  const settings = useMemo(() => {
+    const merged = { ...DEFAULT_SETTINGS, ...stored };
+    if (!LANGUAGES.some((l) => l.id === merged.language)) merged.language = DEFAULT_SETTINGS.language;
+    if (!isValidHex(merged.seedColor) || merged.seedColor.toUpperCase() === '#769CDF') merged.seedColor = DEFAULT_SEED; // #769CDF = previous default
+    if (merged.fontSize === 'xl') merged.fontSize = 'lg'; // removed size
+    if (!FONT_SCALES[merged.fontSize]) merged.fontSize = 'md';
+    return merged;
+  }, [stored]);
+
+  const [systemDark, setSystemDark] = useState(getSystemPrefersDark);
+  const [generated, setGenerated] = useState(null); // { seed, scheme }
 
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e) => setSystemDark(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const isDark =
-    settings.themeMode === "system"
-      ? systemDark
-      : settings.themeMode === "dark";
+  const isDark = settings.themeMode === 'system' ? systemDark : settings.themeMode === 'dark';
+
+  // ---- Material 3 scheme from the seed colour ---------------------------------
+  const seed = settings.seedColor;
+  useEffect(() => {
+    if (seed === DEFAULT_SEED || readCachedScheme(seed)) return undefined;
+    let cancelled = false;
+    // The colour-science library is only fetched when a custom seed is used.
+    import('../theme/generateScheme').then(({ generateScheme }) => {
+      if (cancelled) return;
+      const scheme = generateScheme(seed);
+      cacheScheme(seed, scheme);
+      setGenerated({ seed, scheme });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [seed]);
+
+  const scheme = useMemo(() => {
+    if (seed === DEFAULT_SEED) return DEFAULT_SCHEME;
+    if (generated?.seed === seed) return generated.scheme;
+    return readCachedScheme(seed) || DEFAULT_SCHEME;
+  }, [seed, generated]);
+
+  const colors = isDark ? scheme.dark : scheme.light;
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('dark', isDark);
+    applyRoles(colors, root);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', colors.surface);
+  }, [isDark, colors]);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle("dark", isDark);
-    root.style.setProperty(
-      "--font-scale",
-      String(FONT_SCALES[settings.fontSize] || 1),
-    );
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", isDark ? "#09090b" : "#ffffff");
-  }, [isDark, settings.fontSize]);
+    document.documentElement.style.setProperty('--font-scale', String(FONT_SCALES[settings.fontSize] || 1));
+  }, [settings.fontSize]);
 
-  const update = useCallback(
-    (patch) => {
-      setSettings((prev) => ({ ...prev, ...patch }));
-    },
-    [setSettings],
-  );
+  // ---- Language ----------------------------------------------------------------
+  const lang = settings.language;
+  const i18n = useMemo(() => {
+    // Render-time on purpose: formatters must follow the new language before
+    // any child renders with it.
+    setFormatLocale(lang);
+    return { lang, locale: LANGUAGES.find((l) => l.id === lang)?.locale, t: createT(lang) };
+  }, [lang]);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    const desc = document.querySelector('meta[name="description"]');
+    if (desc) desc.setAttribute('content', i18n.t('meta.description'));
+  }, [lang, i18n]);
+
+  // ---- Actions -----------------------------------------------------------------
+  const update = useCallback((patch) => setStored((prev) => ({ ...DEFAULT_SETTINGS, ...prev, ...patch })), [setStored]);
 
   const cycleThemeMode = useCallback(() => {
-    setSettings((prev) => {
+    setStored((prev) => {
       const order = THEME_MODES.map((m) => m.id);
-      const next = order[(order.indexOf(prev.themeMode) + 1) % order.length];
-      return { ...prev, themeMode: next };
+      const current = { ...DEFAULT_SETTINGS, ...prev }.themeMode;
+      return { ...DEFAULT_SETTINGS, ...prev, themeMode: order[(order.indexOf(current) + 1) % order.length] };
     });
-  }, [setSettings]);
+  }, [setStored]);
 
+  const toggleLanguage = useCallback(() => {
+    setStored((prev) => {
+      const current = { ...DEFAULT_SETTINGS, ...prev }.language;
+      return { ...DEFAULT_SETTINGS, ...prev, language: current === 'vi' ? 'en' : 'vi' };
+    });
+  }, [setStored]);
+
+  // Resets appearance only - the language is an explicit choice, so it stays.
   const resetSettings = useCallback(
-    () => setSettings(DEFAULT_SETTINGS),
-    [setSettings],
+    () => setStored((prev) => ({ ...DEFAULT_SETTINGS, language: { ...DEFAULT_SETTINGS, ...prev }.language })),
+    [setStored],
   );
 
   const value = useMemo(
-    () => ({
-      settings,
-      update,
-      cycleThemeMode,
-      resetSettings,
-      isDark,
-      FONT_SCALES,
-    }),
-    [settings, update, cycleThemeMode, resetSettings, isDark],
+    () => ({ settings, update, cycleThemeMode, toggleLanguage, resetSettings, isDark, colors, FONT_SCALES }),
+    [settings, update, cycleThemeMode, toggleLanguage, resetSettings, isDark, colors],
   );
 
   return (
     <SettingsContext.Provider value={value}>
-      {children}
+      <I18nContext.Provider value={i18n}>{children}</I18nContext.Provider>
     </SettingsContext.Provider>
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSettings() {
   const ctx = useContext(SettingsContext);
-  if (!ctx) throw new Error("useSettings must be used within SettingsProvider");
+  if (!ctx) throw new Error('useSettings must be used within SettingsProvider');
   return ctx;
 }

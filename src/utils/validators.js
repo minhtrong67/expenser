@@ -1,18 +1,10 @@
+// Validators return translated messages, so each takes the `t` function.
 export function trimValue(v) {
   return typeof v === 'string' ? v.trim() : v;
 }
 
-export function trimAllFields(obj) {
-  const out = {};
-  for (const key of Object.keys(obj)) {
-    out[key] = trimValue(obj[key]);
-  }
-  return out;
-}
-
 export function isValidEmail(email) {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(String(email).trim());
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
 }
 
 export function isStrongPassword(pw) {
@@ -29,72 +21,46 @@ export function isPositiveNumber(v) {
 }
 
 export function isValidDate(v) {
-  const d = new Date(v);
-  return !Number.isNaN(d.getTime());
+  return !Number.isNaN(new Date(v).getTime());
 }
 
 export function maxLength(v, max) {
   return typeof v === 'string' ? v.trim().length <= max : true;
 }
 
-/**
- * Validate a transaction form payload.
- * Returns { valid, errors } where errors is a map of field -> message.
- */
-export function validateTransaction(form) {
+export const MAX_AMOUNT = 999_999_999_999;
+
+/** Validate a transaction form payload -> { valid, errors: { field: message } } */
+export function validateTransaction(form, t) {
   const errors = {};
-  const name = trimValue(form.note);
-  if (!form.type || !['income', 'expense'].includes(form.type)) {
-    errors.type = 'Vui lòng chọn loại giao dịch.';
-  }
-  if (!isPositiveNumber(form.amount)) {
-    errors.amount = 'Số tiền phải lớn hơn 0.';
-  }
-  if (!isNonEmpty(form.categoryId)) {
-    errors.categoryId = 'Vui lòng chọn danh mục.';
-  }
-  if (!isNonEmpty(form.walletId)) {
-    errors.walletId = 'Vui lòng chọn ví/tài khoản.';
-  }
-  if (!isValidDate(form.date)) {
-    errors.date = 'Ngày không hợp lệ.';
-  } else if (new Date(form.date) > new Date(new Date().setHours(23, 59, 59, 999))) {
-    errors.date = 'Ngày giao dịch không được ở tương lai.';
-  }
-  if (name && !maxLength(name, 200)) {
-    errors.note = 'Ghi chú tối đa 200 ký tự.';
-  }
+  const note = trimValue(form.note);
+  if (!form.type || !['income', 'expense'].includes(form.type)) errors.type = t('validation.typeRequired');
+  if (!isPositiveNumber(form.amount)) errors.amount = t('validation.amountPositive');
+  else if (Number(form.amount) > MAX_AMOUNT) errors.amount = t('validation.amountTooLarge');
+  if (!isNonEmpty(form.categoryId)) errors.categoryId = t('validation.categoryRequired');
+  if (!isNonEmpty(form.walletId)) errors.walletId = t('validation.walletRequired');
+  if (!isValidDate(form.date)) errors.date = t('validation.dateInvalid');
+  else if (new Date(form.date) > new Date(new Date().setHours(23, 59, 59, 999))) errors.date = t('validation.dateFuture');
+  if (note && !maxLength(note, 200)) errors.note = t('validation.noteMax');
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
-export function validateCategory(form, existingNames = []) {
+export function validateCategory(form, existingNames, t) {
   const errors = {};
   const name = trimValue(form.name);
-  if (!isNonEmpty(name)) {
-    errors.name = 'Tên danh mục không được để trống.';
-  } else if (!maxLength(name, 40)) {
-    errors.name = 'Tên danh mục tối đa 40 ký tự.';
-  } else if (existingNames.some((n) => n.toLowerCase() === name.toLowerCase())) {
-    errors.name = 'Danh mục này đã tồn tại.';
-  }
-  if (!form.type || !['income', 'expense'].includes(form.type)) {
-    errors.type = 'Vui lòng chọn loại danh mục.';
-  }
+  if (!isNonEmpty(name)) errors.name = t('validation.categoryNameRequired');
+  else if (!maxLength(name, 40)) errors.name = t('validation.categoryNameMax');
+  else if (existingNames.some((n) => n.toLowerCase() === name.toLowerCase())) errors.name = t('validation.categoryExists');
+  if (!form.type || !['income', 'expense'].includes(form.type)) errors.type = t('validation.categoryTypeRequired');
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
-export function validateWallet(form, existingNames = []) {
+export function validateWallet(form, existingNames, t) {
   const errors = {};
   const name = trimValue(form.name);
-  if (!isNonEmpty(name)) {
-    errors.name = 'Tên ví không được để trống.';
-  } else if (!maxLength(name, 40)) {
-    errors.name = 'Tên ví tối đa 40 ký tự.';
-  } else if (existingNames.some((n) => n.toLowerCase() === name.toLowerCase())) {
-    errors.name = 'Ví này đã tồn tại.';
-  }
-  if (form.balance === '' || form.balance === null || Number.isNaN(Number(form.balance))) {
-    errors.balance = 'Số dư không hợp lệ.';
-  }
+  if (!isNonEmpty(name)) errors.name = t('validation.walletNameRequired');
+  else if (!maxLength(name, 40)) errors.name = t('validation.walletNameMax');
+  else if (existingNames.some((n) => n.toLowerCase() === name.toLowerCase())) errors.name = t('validation.walletExists');
+  if (form.balance === '' || form.balance === null || Number.isNaN(Number(form.balance))) errors.balance = t('validation.balanceInvalid');
   return { valid: Object.keys(errors).length === 0, errors };
 }

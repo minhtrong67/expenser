@@ -1,172 +1,130 @@
-import { useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
-import toast from "react-hot-toast";
-import Icon from "../components/ui/Icon";
-import Emoji from "../components/ui/Emoji";
-import Button from "../components/ui/Button";
-import Modal from "../components/ui/Modal";
-import ConfirmDialog from "../components/ui/ConfirmDialog";
-import SwipeableItem from "../components/ui/SwipeableItem";
-import { TableSkeleton, CardSkeleton } from "../components/ui/Skeleton";
-import TransactionFormModal from "../components/TransactionFormModal";
-import TransactionFilters from "../components/TransactionFilters";
-import CalendarView from "../components/CalendarView";
-import { EmptyState } from "./Dashboard";
-import { useData } from "../contexts/DataContext";
-import {
-  formatMoney,
-  formatDayHeader,
-  formatTime,
-  dayKey,
-  monthStartInput,
-  monthEndInput,
-  parseLocalDate,
-  parseLocalDateEnd,
-} from "../utils/format";
-import { getCategoryEmoji } from "../utils/categoryEmoji";
-import { ArrowDownUp, ArrowUpDown } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import Icon from '../components/ui/Icon';
+import Emoji from '../components/ui/Emoji';
+import Button from '../components/ui/Button';
+import SegmentedButton from '../components/ui/SegmentedButton';
+import Fab from '../components/ui/Fab';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import EmptyState from '../components/ui/EmptyState';
+import SwipeableItem, { ItemActions } from '../components/ui/SwipeableItem';
+import { TableSkeleton, CardSkeleton } from '../components/ui/Skeleton';
+import TransactionFormModal from '../components/TransactionFormModal';
+import TransactionFilters from '../components/TransactionFilters';
+import CalendarView from '../components/CalendarView';
+import { useData } from '../contexts/DataContext';
+import { useI18n } from '../i18n';
+import { useSessionState } from '../hooks/useSessionState';
+import { formatMoney, formatDayHeader, formatTime, dayKey, monthStartInput, monthEndInput, parseLocalDate, parseLocalDateEnd } from '../utils/format';
+import { getCategoryEmoji } from '../utils/categoryEmoji';
 
-const VIEWS = [
-  { id: "list", label: "Danh sách", icon: "receipt_long" },
-  { id: "calendar", label: "Lịch", icon: "calendar_month" },
-];
+const PAGE = 60; // transactions rendered per "page" of the list
 
-function defaultFilters() {
-  return {
-    search: "",
-    type: "all",
-    categoryId: "all",
-    walletId: "all",
-    dateFrom: monthStartInput(),
-    dateTo: monthEndInput(),
-  };
-}
+const defaultFilters = () => ({
+  search: '',
+  type: 'all',
+  categoryId: 'all',
+  walletId: 'all',
+  dateFrom: monthStartInput(),
+  dateTo: monthEndInput(),
+  sort: 'desc', // 'desc' = newest first, 'asc' = oldest first
+});
 
 export default function TransactionsPage() {
-  const {
-    transactions,
-    categories,
-    wallets,
-    stats,
-    getCategory,
-    getWallet,
-    deleteTransaction,
-    deleteTransactionsBulk,
-    loading,
-  } = useData();
+  const { t } = useI18n();
+  const { transactions, categories, wallets, stats, getCategory, getWallet, deleteTransaction, loading } = useData();
   const { openAddTx } = useOutletContext();
 
-  const [view, setView] = useState("list");
-  const [filters, setFilters] = useState(defaultFilters);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [sortDir, setSortDir] = useState("desc");
-  const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState(new Set());
+  // Filters, view, sort and panel state are kept in sessionStorage so they
+  // survive navigating to another page and back.
+  const [view, setView] = useSessionState('transactions.view', 'list');
+  const [filters, setFiltersRaw] = useSessionState('transactions.filters', defaultFilters);
+  const [filtersOpen, setFiltersOpen] = useSessionState('transactions.filtersOpen', false);
+
+  const [limit, setLimit] = useState(PAGE);
   const [editingTx, setEditingTx] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [detailTarget, setDetailTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const setFilters = useCallback(
+    (updater) => {
+      setFiltersRaw(updater);
+      setLimit(PAGE);
+    },
+    [setFiltersRaw],
+  );
 
   const defaults = defaultFilters();
-  const activeFilterCount = Object.keys(defaults).filter(
-    (k) => filters[k] !== defaults[k],
-  ).length;
+  const activeFilterCount = Object.keys(defaults).filter((k) => filters[k] !== defaults[k]).length;
 
   const filtered = useMemo(() => {
     const fromDate = filters.dateFrom ? parseLocalDate(filters.dateFrom) : null;
     const toDate = filters.dateTo ? parseLocalDateEnd(filters.dateTo) : null;
-    let list = transactions.filter((t) => {
-      if (filters.type !== "all" && t.type !== filters.type) return false;
-      if (filters.categoryId !== "all" && t.categoryId !== filters.categoryId)
-        return false;
-      if (
-        filters.walletId !== "all" &&
-        t.walletId !== filters.walletId &&
-        t.fromWalletId !== filters.walletId &&
-        t.toWalletId !== filters.walletId
-      )
-        return false;
-      if (fromDate && t.date < fromDate) return false;
-      if (toDate && t.date > toDate) return false;
-      if (filters.search.trim()) {
-        const q = filters.search.trim().toLowerCase();
-        const catName = getCategory(t.categoryId)?.name?.toLowerCase() || "";
-        if (!(t.note || "").toLowerCase().includes(q) && !catName.includes(q))
-          return false;
+    const q = filters.search.trim().toLowerCase();
+    const list = transactions.filter((tx) => {
+      if (filters.type !== 'all' && tx.type !== filters.type) return false;
+      if (filters.categoryId !== 'all' && tx.categoryId !== filters.categoryId) return false;
+      if (filters.walletId !== 'all' && tx.walletId !== filters.walletId && tx.fromWalletId !== filters.walletId && tx.toWalletId !== filters.walletId) return false;
+      if (fromDate && tx.date < fromDate) return false;
+      if (toDate && tx.date > toDate) return false;
+      if (q) {
+        const catName = getCategory(tx.categoryId)?.name?.toLowerCase() || '';
+        if (!(tx.note || '').toLowerCase().includes(q) && !catName.includes(q)) return false;
       }
       return true;
     });
-    list = [...list].sort((a, b) =>
-      sortDir === "desc" ? b.date - a.date : a.date - b.date,
-    );
-    return list;
-  }, [transactions, filters, sortDir, getCategory]);
+    return list.sort((a, b) => (filters.sort === 'asc' ? a.date - b.date : b.date - a.date));
+  }, [transactions, filters, getCategory]);
 
-  // Group the already-sorted list into day sections for the list view,
-  // with each day's own income/expense totals for the section header.
+  const visible = useMemo(() => filtered.slice(0, limit), [filtered, limit]);
+  const hasMore = filtered.length > limit;
+
+  // Infinite scroll: reveal the next page when the sentinel comes into view.
+  const sentinelRef = useRef(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!hasMore || !el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver((entries) => entries[0].isIntersecting && setLimit((l) => l + PAGE), { rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, visible.length]);
+
+  // Group the sorted list into day sections with a net total per day.
   const groups = useMemo(() => {
     const map = new Map();
-    filtered.forEach((t) => {
-      const key = dayKey(t.date);
-      if (!map.has(key))
-        map.set(key, { date: t.date, items: [], income: 0, expense: 0 });
+    visible.forEach((tx) => {
+      const key = dayKey(tx.date);
+      if (!map.has(key)) map.set(key, { key, date: tx.date, items: [], income: 0, expense: 0 });
       const g = map.get(key);
-      g.items.push(t);
-      if (t.type === "income") g.income += t.amount;
-      else if (t.type === "expense") g.expense += t.amount;
+      g.items.push(tx);
+      if (tx.type === 'income') g.income += tx.amount;
+      else if (tx.type === 'expense') g.expense += tx.amount;
     });
     return Array.from(map.values());
-  }, [filtered]);
-
-  function toggleSelect(id) {
-    setSelected((s) => {
-      const next = new Set(s);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
-
-  function toggleSelectMode() {
-    setSelectMode((m) => {
-      if (m) setSelected(new Set());
-      return !m;
-    });
-  }
+  }, [visible]);
 
   async function handleDelete() {
     setDeleting(true);
     try {
       await deleteTransaction(deleteTarget);
-      toast.success("Đã xóa giao dịch.");
+      toast.success(t('tx.deleted'));
       setDeleteTarget(null);
     } catch {
-      toast.error("Không thể xóa giao dịch.");
+      toast.error(t('tx.deleteError'));
     } finally {
       setDeleting(false);
     }
   }
 
-  async function handleBulkDelete() {
-    const txs = filtered.filter((t) => selected.has(t.id));
-    setBulkDeleting(true);
-    try {
-      await deleteTransactionsBulk(txs);
-      toast.success(`Đã xóa ${txs.length} giao dịch.`);
-      setSelected(new Set());
-      setSelectMode(false);
-      setBulkDeleteOpen(false);
-    } catch {
-      toast.error("Không thể xóa các giao dịch đã chọn.");
-    } finally {
-      setBulkDeleting(false);
-    }
-  }
+  const editTx = (tx) => {
+    setEditingTx(tx);
+    setFormOpen(true);
+  };
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 sm:space-y-5">
       <div className="grid grid-cols-2 gap-3">
         {loading ? (
           <>
@@ -175,299 +133,146 @@ export default function TransactionsPage() {
           </>
         ) : (
           <>
-            <div className="flex flex-col items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-emerald-500/20 dark:bg-emerald-500/10">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20">
+            <div className="flex flex-col items-start gap-3 rounded-2xl bg-income-container p-4 text-on-income-container transition-shadow hover:shadow-elev-1">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-income text-on-income">
                 <Icon name="arrow_upward" size={20} />
               </span>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                  Thu tháng này
-                </p>
-
-                <p className="mt-0.5 text-base font-bold leading-tight tabular-nums text-emerald-800 sm:text-lg dark:text-emerald-300">
-                  {formatMoney(stats.monthIncome)}
-                </p>
+              <div className="min-w-0">
+                <p className="text-label-md opacity-80">{t('tx.monthIncome')}</p>
+                <p className="wrap-any text-title-md font-bold tabular-nums leading-tight sm:text-title-lg">{formatMoney(stats.monthIncome)}</p>
               </div>
             </div>
-
-            <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-rose-500/20 dark:bg-rose-500/10">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500 text-white shadow-sm shadow-rose-500/20">
+            <div className="flex flex-col items-start gap-3 rounded-2xl bg-expense-container p-4 text-on-expense-container transition-shadow hover:shadow-elev-1">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-expense text-on-expense">
                 <Icon name="arrow_downward" size={20} />
               </span>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">
-                  Chi tháng này
-                </p>
-
-                <p className="mt-0.5 text-base font-bold leading-tight tabular-nums text-rose-800 sm:text-lg dark:text-rose-300">
-                  {formatMoney(stats.monthExpense)}
-                </p>
+              <div className="min-w-0">
+                <p className="text-label-md opacity-80">{t('tx.monthExpense')}</p>
+                <p className="wrap-any text-title-md font-bold tabular-nums leading-tight sm:text-title-lg">{formatMoney(stats.monthExpense)}</p>
               </div>
             </div>
           </>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="grid w-full grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800 sm:w-64">
-          {VIEWS.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => setView(v.id)}
-              className={`flex items-center justify-center gap-1.5 rounded-lg py-3 text-sm font-semibold transition ${
-                view === v.id
-                  ? "bg-white text-accent-700 shadow-sm dark:bg-zinc-900 dark:text-accent-400"
-                  : "text-zinc-500"
-              }`}
-            >
-              <Icon name={v.icon} size={17} /> {v.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <SegmentedButton
+        className="sm:max-w-xs"
+        ariaLabel={t('tx.view')}
+        value={view}
+        onChange={setView}
+        options={[
+          { id: 'list', label: t('tx.viewList'), icon: 'receipt_long' },
+          { id: 'calendar', label: t('tx.viewCalendar'), icon: 'calendar_month' },
+        ]}
+      />
 
-      {view === "calendar" ? (
+      {view === 'calendar' ? (
         <CalendarView />
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setFiltersOpen((o) => !o)}
-              className={`flex flex-1 items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 text-sm font-semibold transition sm:w-auto sm:flex-none ${
-                filtersOpen
-                  ? "border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400"
-                  : "border-zinc-200 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <Icon name="tune" size={19} />
-                Bộ lọc
-                {activeFilterCount > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-600 px-1 text-[11px] font-bold text-white">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </span>
-              <Icon
-                name="expand_more"
-                size={20}
-                className={`transition-transform duration-200 ${filtersOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-            <button
-              onClick={() => setSortDir((d) => (d === "desc" ? "asc" : "desc"))}
-              className="flex items-center gap-1.5 rounded-2xl border border-zinc-200 bg-white px-3.5 py-3.5 text-sm font-semibold text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-              aria-label="Đổi thứ tự sắp xếp"
-              title="Đổi thứ tự sắp xếp theo ngày"
-            >
-              {sortDir === "desc" ? (
-                <ArrowDownUp size={18} />
-              ) : (
-                <ArrowUpDown size={18} />
-              )}
-
-              {/* <Icon
-                name={sortDir === "desc" ? "arrow-up-down" : "arrow-down-up"}
-                size={18}
-              /> */}
-            </button>
-            <button
-              onClick={toggleSelectMode}
-              className={`rounded-2xl border px-3.5 py-3.5 text-sm font-semibold transition ${
-                selectMode
-                  ? "border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400"
-                  : "border-zinc-200 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-              }`}
-            >
-              {selectMode ? "Xong" : "Chọn"}
-            </button>
-          </div>
-
-          {filtersOpen && (
-            <div className="animate-slide-up">
+          <div>
+            <div>
               <TransactionFilters
                 filters={filters}
                 setFilters={setFilters}
                 categories={categories}
                 wallets={wallets}
+                open={filtersOpen}
+                onToggle={() => setFiltersOpen((o) => !o)}
+                activeCount={activeFilterCount}
                 onReset={() => setFilters(defaultFilters())}
               />
             </div>
-          )}
-
-          {selectMode && selected.size > 0 && (
-            <div className="flex items-center justify-between rounded-xl bg-accent-50 px-4 py-3 text-sm text-accent-700 dark:bg-accent-500/10 dark:text-accent-400">
-              <span>Đã chọn {selected.size} giao dịch</span>
-              <button
-                onClick={() => setBulkDeleteOpen(true)}
-                className="font-semibold text-rose-500 hover:underline"
-              >
-                Xóa đã chọn
-              </button>
-            </div>
-          )}
+          </div>
 
           {loading ? (
             <TableSkeleton />
           ) : filtered.length === 0 ? (
-            <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl bg-surface-container-low">
               {transactions.length > 0 ? (
                 <EmptyState
                   icon="filter_alt_off"
-                  text="Không có giao dịch nào phù hợp với bộ lọc hiện tại (mặc định chỉ hiển thị tháng này)."
+                  text={t('tx.noMatch')}
                   action={{
-                    label: "Xem tất cả giao dịch",
+                    label: t('tx.showAll'),
                     onClick: () => {
-                      setFilters({
-                        search: "",
-                        type: "all",
-                        categoryId: "all",
-                        walletId: "all",
-                        dateFrom: "",
-                        dateTo: "",
-                      });
+                      setFilters((f) => ({ ...f, search: '', type: 'all', categoryId: 'all', walletId: 'all', dateFrom: '', dateTo: '' }));
                       setFiltersOpen(true);
                     },
                   }}
                 />
               ) : (
-                <EmptyState
-                  icon="receipt_long"
-                  text="Chưa có giao dịch nào."
-                  action={{ label: "Thêm giao dịch mới", onClick: openAddTx }}
-                />
+                <EmptyState icon="receipt_long" text={t('dashboard.noTx')} action={{ label: t('tx.addTitle'), onClick: openAddTx }} />
               )}
             </div>
           ) : (
-            <div className="space-y-5">
-              <p className="px-1 text-xs text-zinc-400">
-                {selectMode
-                  ? "Chạm vào giao dịch để chọn"
-                  : "Vuốt phải để sửa · vuốt trái để xóa"}
+            <div className="space-y-4 sm:space-y-5">
+              <p className="px-1 text-body-sm text-on-surface-variant">
+                {t('tx.resultCount', { n: filtered.length })} · {t('common.swipeHint')}
               </p>
-              {groups.map((group) => (
-                <div key={dayKey(group.date)}>
-                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                    <h3 className="font-bold uppercase tracking-wide text-zinc-400">
-                      {formatDayHeader(group.date)}
-                    </h3>
-
-                    {/* <div className="flex shrink-0 items-center gap-2 text-[11px] font-semibold tabular-nums">
-                      {group.income > 0 && <span className="text-emerald-600">+{formatMoney(group.income)}</span>}
-                      {group.expense > 0 && <span className="text-rose-500">-{formatMoney(group.expense)}</span>}
-                    </div> */}
-
-                    <div className="flex shrink-0 items-center gap-2 font-bold tabular-nums">
+              {groups.map((group) => {
+                const net = group.income - group.expense;
+                return (
+                  <section key={group.key}>
+                    <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                      <h3 className="text-label-lg uppercase tracking-wide text-on-surface-variant">{formatDayHeader(group.date)}</h3>
                       {(group.income > 0 || group.expense > 0) && (
-                        <span
-                          className={
-                            group.income - group.expense >= 0
-                              ? "text-emerald-600"
-                              : "text-rose-500"
-                          }
-                        >
-                          {group.income - group.expense >= 0 ? "+" : "-"}
-                          {formatMoney(Math.abs(group.income - group.expense))}
+                        <span className={`text-label-lg font-bold tabular-nums ${net >= 0 ? 'text-income' : 'text-expense'}`}>
+                          {net >= 0 ? '+' : '-'}
+                          {formatMoney(Math.abs(net))}
                         </span>
                       )}
                     </div>
-                  </div>
-                  <div className="space-y-2.5">
-                    {group.items.map((t) => {
-                      const cat = getCategory(t.categoryId);
-                      const wallet = getWallet(t.walletId);
-                      const isTransfer = t.type === "transfer";
-                      const isSelected = selected.has(t.id);
-                      return (
-                        <SwipeableItem
-                          key={t.id}
-                          rounded="rounded-xl"
-                          disabled={selectMode}
-                          onEdit={
-                            isTransfer
-                              ? undefined
-                              : () => {
-                                  setEditingTx(t);
-                                  setFormOpen(true);
-                                }
-                          }
-                          onDelete={
-                            isTransfer ? undefined : () => setDeleteTarget(t)
-                          }
-                          // onTap={() => {
-                          //   if (selectMode) {
-                          //     if (!isTransfer) toggleSelect(t.id);
-                          //     return;
-                          //   }
-                          //   setDetailTarget(t);
-                          // }}
-                        >
-                          <div
-                            className={`flex items-center gap-3 rounded-xl border bg-white p-3.5 transition dark:bg-zinc-900 ${
-                              isSelected
-                                ? "border-accent-400 bg-accent-50/60 dark:bg-accent-500/10"
-                                : "border-zinc-100 dark:border-zinc-800"
-                            }`}
+                    <div className="space-y-2">
+                      {group.items.map((tx) => {
+                        const cat = getCategory(tx.categoryId);
+                        const wallet = getWallet(tx.walletId) || getWallet(tx.fromWalletId);
+                        const isTransfer = tx.type === 'transfer';
+                        return (
+                          <SwipeableItem
+                            key={tx.id}
+                            rounded="rounded-2xl"
+                            className="cv-auto"
+                                                        onEdit={isTransfer ? undefined : () => editTx(tx)}
+                            onDelete={isTransfer ? undefined : () => setDeleteTarget(tx)}
                           >
-                            {selectMode && !isTransfer && (
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                readOnly
-                                className="h-4 w-4 shrink-0 rounded accent-accent-600"
-                              />
-                            )}
-                            <span
-                              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
-                              style={{
-                                backgroundColor: `${cat?.color || "#64748B"}20`,
-                                color: cat?.color || "#64748B",
-                              }}
-                            >
-                              {isTransfer ? (
-                                <Icon name="sync_alt" size={20} />
-                              ) : (
-                                <Emoji size={22}>{getCategoryEmoji(cat)}</Emoji>
-                              )}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">
-                                {isTransfer
-                                  ? "Chuyển khoản"
-                                  : cat?.name || "Khác"}
-                              </p>
-                              <p className="truncate text-xs text-zinc-400">
-                                {formatTime(t.date)} · {wallet?.name || ""}
-                              </p>
-                              {t.note && (
-                                <p className="truncate text-xs text-zinc-400">
-                                  {t.note}
+                            <div className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-3">
+                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${cat?.color || '#64748B'}26`, color: cat?.color || '#64748B' }}>
+                                {isTransfer ? <Icon name="sync_alt" size={20} /> : <Emoji size={22}>{getCategoryEmoji(cat)}</Emoji>}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="wrap-any text-title-sm text-on-surface">{isTransfer ? t('tx.transfer') : cat?.name || t('common.other')}</p>
+                                <p className="wrap-any text-body-sm text-on-surface-variant">
+                                  {formatTime(tx.date)} · {wallet?.name || ''}
                                 </p>
-                              )}
+                                {tx.note && <p className="wrap-any text-body-sm text-on-surface-variant">{tx.note}</p>}
+                              </div>
+                              <span className={`shrink-0 text-title-sm font-bold tabular-nums ${tx.type === 'income' ? 'text-income' : tx.type === 'expense' ? 'text-expense' : 'text-on-surface-variant'}`}>
+                                {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
+                                {formatMoney(tx.amount)}
+                              </span>
+                              {!isTransfer && <ItemActions onEdit={() => editTx(tx)} onDelete={() => setDeleteTarget(tx)} />}
                             </div>
-                            <span
-                              className={`shrink-0 text-sm font-bold tabular-nums ${t.type === "income" ? "text-emerald-600" : t.type === "expense" ? "text-rose-500" : "text-zinc-600"}`}
-                            >
-                              {t.type === "income"
-                                ? "+"
-                                : t.type === "expense"
-                                  ? "-"
-                                  : ""}
-                              {formatMoney(t.amount)}
-                            </span>
-                          </div>
-                        </SwipeableItem>
-                      );
-                    })}
-                  </div>
+                          </SwipeableItem>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
+              {hasMore && (
+                <div ref={sentinelRef} className="flex justify-center py-4">
+                  <Button variant="tonal" size="sm" onClick={() => setLimit((l) => l + PAGE)}>
+                    {t('common.loadMore')}
+                  </Button>
                 </div>
-              ))}
+              )}
             </div>
           )}
         </>
       )}
+
+      <Fab label={t('tx.addTitle')} onClick={openAddTx} />
 
       <TransactionFormModal
         open={formOpen}
@@ -477,120 +282,7 @@ export default function TransactionsPage() {
         }}
         editingTx={editingTx}
       />
-
-      <Modal
-        open={!!detailTarget}
-        onClose={() => setDetailTarget(null)}
-        title="Chi tiết giao dịch"
-        size="sm"
-      >
-        {detailTarget &&
-          (() => {
-            const cat = getCategory(detailTarget.categoryId);
-            const wallet = getWallet(detailTarget.walletId);
-            const isTransfer = detailTarget.type === "transfer";
-            return (
-              <div className="flex flex-col items-center gap-1 py-2 text-center">
-                <span
-                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl"
-                  style={{
-                    backgroundColor: `${cat?.color || "#64748B"}20`,
-                    color: cat?.color || "#64748B",
-                  }}
-                >
-                  {isTransfer ? (
-                    <Icon name="sync_alt" size={28} />
-                  ) : (
-                    <Emoji size={32}>{getCategoryEmoji(cat)}</Emoji>
-                  )}
-                </span>
-                <p
-                  className={`mt-2 text-2xl font-extrabold tabular-nums ${detailTarget.type === "income" ? "text-emerald-600" : detailTarget.type === "expense" ? "text-rose-500" : "text-zinc-700 dark:text-zinc-200"}`}
-                >
-                  {detailTarget.type === "income"
-                    ? "+"
-                    : detailTarget.type === "expense"
-                      ? "-"
-                      : ""}
-                  {formatMoney(detailTarget.amount)}
-                </p>
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-                  {isTransfer ? "Chuyển khoản" : cat?.name || "Khác"}
-                </p>
-
-                <div className="mt-4 w-full space-y-2.5 rounded-xl bg-zinc-50 p-4 text-left text-sm dark:bg-zinc-800/50">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-zinc-400">Ví</span>
-                    <span className="font-medium text-zinc-700 dark:text-zinc-200">
-                      {wallet?.name || "—"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-zinc-400">Thời gian</span>
-                    <span className="font-medium text-zinc-700 dark:text-zinc-200">
-                      {formatDayHeader(detailTarget.date)},{" "}
-                      {formatTime(detailTarget.date)}
-                    </span>
-                  </div>
-                  {detailTarget.note && (
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="shrink-0 text-zinc-400">Ghi chú</span>
-                      <span className="text-right font-medium text-zinc-700 dark:text-zinc-200">
-                        {detailTarget.note}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {!isTransfer && (
-                  <div className="mt-5 flex w-full gap-3">
-                    <Button
-                      variant="outline-danger"
-                      icon="delete"
-                      className="flex-1"
-                      onClick={() => {
-                        setDeleteTarget(detailTarget);
-                        setDetailTarget(null);
-                      }}
-                    >
-                      Xóa
-                    </Button>
-                    <Button
-                      icon="edit"
-                      className="flex-1"
-                      onClick={() => {
-                        setEditingTx(detailTarget);
-                        setFormOpen(true);
-                        setDetailTarget(null);
-                      }}
-                    >
-                      Sửa
-                    </Button>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-      </Modal>
-
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        loading={deleting}
-        danger
-        confirmText="Xóa"
-        message="Bạn có chắc muốn xóa giao dịch này? Số dư ví sẽ được cập nhật lại."
-      />
-      <ConfirmDialog
-        open={bulkDeleteOpen}
-        onClose={() => setBulkDeleteOpen(false)}
-        onConfirm={handleBulkDelete}
-        loading={bulkDeleting}
-        danger
-        confirmText="Xóa"
-        message={`Bạn có chắc muốn xóa ${selected.size} giao dịch đã chọn?`}
-      />
+      <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} loading={deleting} message={t('tx.confirmDelete')} />
     </div>
   );
 }

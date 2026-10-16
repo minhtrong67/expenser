@@ -1,14 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import {
-  getAuth,
-  GoogleAuthProvider,
-  browserLocalPersistence,
-  setPersistence,
-} from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
-// TODO: Thay thế bằng cấu hình Firebase project của bạn.
-// Lấy tại: Firebase Console > Project Settings > General > Your apps > SDK setup and configuration
+// Firebase project config comes from Vite env variables (see .env.example).
+// Firestore lives in ./firestore.js so the login screen only downloads the
+// (much smaller) Auth SDK; the database SDK loads after sign-in.
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'YOUR_API_KEY',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'YOUR_PROJECT.firebaseapp.com',
@@ -20,7 +15,6 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
 setPersistence(auth, browserLocalPersistence).catch(() => {});

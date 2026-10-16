@@ -1,22 +1,32 @@
+import { useT } from '../../i18n';
 import Modal from './Modal';
 import Button from './Button';
 import Icon from './Icon';
 
-export default function ConfirmDialog({ open, onClose, onConfirm, title = 'Xác nhận', message, confirmText = 'Xóa', confirmIcon, danger = true, loading }) {
-  const icon = confirmIcon || (danger ? 'delete' : 'check');
+export default function ConfirmDialog({ open, onClose, onConfirm, title, message, confirmText, confirmIcon, danger = true, loading }) {
+  const t = useT();
   return (
-    <Modal open={open} onClose={onClose} title={title} size="sm">
-      <div className="flex flex-col items-center gap-3 py-2 text-center">
-        <div className={`flex h-12 w-12 items-center justify-center rounded-full ${danger ? 'bg-rose-50 text-rose-500 dark:bg-rose-500/10' : 'bg-accent-50 text-accent-600 dark:bg-accent-500/10'}`}>
-          <Icon name={danger ? 'warning' : 'help'} size={26} />
-        </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">{message}</p>
-        <div className="mt-2 flex w-full gap-3">
-          <Button variant="outline-danger" icon="close" className="flex-1" onClick={onClose} disabled={loading}>
-            Hủy
+    <Modal open={open} onClose={onClose} title={title || t('common.confirm')} size="sm">
+      <div className="flex flex-col items-center gap-4 pt-2 text-center">
+        <span
+          className={`flex h-14 w-14 items-center justify-center rounded-full ${
+            danger ? 'bg-error-container text-on-error-container' : 'bg-primary-container text-on-primary-container'
+          }`}
+        >
+          <Icon name={danger ? 'warning' : 'help'} size={28} />
+        </span>
+        <p className="text-body-lg text-on-surface-variant">{message}</p>
+        <div className="mt-2 flex w-full justify-end gap-2">
+          <Button variant="text" onClick={onClose} disabled={loading}>
+            {t('common.cancel')}
           </Button>
-          <Button variant={danger ? 'danger' : 'primary'} icon={icon} className="flex-1" onClick={onConfirm} loading={loading}>
-            {confirmText}
+          <Button
+            variant={danger ? 'danger' : 'filled'}
+            icon={confirmIcon || (danger ? 'delete' : 'check')}
+            onClick={onConfirm}
+            loading={loading}
+          >
+            {confirmText || t('common.delete')}
           </Button>
         </div>
       </div>

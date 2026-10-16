@@ -1,18 +1,25 @@
-export default function Field({ label, error, hint, required, children, htmlFor }) {
+// Label + helper wrapper for non-text controls (emoji picker, colour picker, ...).
+export default function Field({ label, error, hint, required, children }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       {label && (
-        <label htmlFor={htmlFor} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <p className="text-label-lg text-on-surface-variant">
           {label}
-          {required && <span className="ml-0.5 text-rose-500">*</span>}
-        </label>
+          {required && <span className="ml-0.5 text-error">*</span>}
+        </p>
       )}
       {children}
       {error ? (
-        <p className="text-xs font-medium text-rose-500">{error}</p>
+        <p className="text-body-sm text-error">{error}</p>
       ) : hint ? (
-        <p className="text-xs text-zinc-400">{hint}</p>
+        <p className="text-body-sm text-on-surface-variant">{hint}</p>
       ) : null}
     </div>
   );
+}
+
+/** Shared helper line under filled text fields. */
+export function SupportingText({ error, hint }) {
+  if (!error && !hint) return null;
+  return <p className={`md-supporting ${error ? 'md-supporting-error' : ''}`}>{error || hint}</p>;
 }

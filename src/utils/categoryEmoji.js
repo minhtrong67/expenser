@@ -1,45 +1,44 @@
 // Curated emoji picks shown in the category emoji picker, grouped by theme
-// so users can find something relevant quickly while still being free to
-// type/paste literally any emoji they like into the custom field.
+// (labelKey is an i18n key) while users stay free to type/paste any emoji.
 export const EMOJI_GROUPS = [
   {
-    label: 'Ăn uống',
+    labelKey: 'emoji.food',
     emojis: ['🍔', '🍕', '🍜', '🍣', '🍱', '🍰', '☕', '🧋', '🍺', '🍎', '🥗', '🍳'],
   },
   {
-    label: 'Di chuyển',
+    labelKey: 'emoji.transport',
     emojis: ['🚗', '🚕', '🚌', '🚆', '✈️', '🛵', '🚲', '⛽', '🅿️', '🚢', '🚀', '🚦'],
   },
   {
-    label: 'Mua sắm',
+    labelKey: 'emoji.shopping',
     emojis: ['🛍️', '🛒', '👗', '👟', '💄', '💍', '🎁', '🏬', '👜', '⌚', '🕶️', '🧴'],
   },
   {
-    label: 'Giải trí',
+    labelKey: 'emoji.entertainment',
     emojis: ['🎮', '🎬', '🎵', '⚽', '🏀', '🎉', '🎲', '📸', '🎨', '🎳', '🎤', '🧩'],
   },
   {
-    label: 'Học tập & làm việc',
+    labelKey: 'emoji.work',
     emojis: ['📚', '✏️', '💻', '🎓', '🔬', '🧮', '🖨️', '📝', '💼', '📈', '🧑‍💻', '📎'],
   },
   {
-    label: 'Hóa đơn & tiện ích',
+    labelKey: 'emoji.utilities',
     emojis: ['🧾', '💡', '💧', '📶', '📱', '📺', '🔌', '🧺', '🛢️', '📡', '🔋', '🧯'],
   },
   {
-    label: 'Sức khỏe',
+    labelKey: 'emoji.health',
     emojis: ['❤️‍🩹', '🏥', '💪', '🧘', '💊', '🧠', '🩺', '💉', '👓', '🦷', '🧴', '🏃'],
   },
   {
-    label: 'Nhà ở & gia đình',
+    labelKey: 'emoji.home',
     emojis: ['🏠', '🏢', '🧒', '🐶', '🪑', '🌳', '🧹', '🔧', '👶', '👨‍👩‍👧', '🛏️', '🐱'],
   },
   {
-    label: 'Tài chính & thu nhập',
+    labelKey: 'emoji.finance',
     emojis: ['💰', '🏦', '📈', '💵', '🎁', '💱', '💳', '🎀', '🏡', '🤝', '📊', '🪙'],
   },
   {
-    label: 'Khác',
+    labelKey: 'emoji.other',
     emojis: ['🏷️', '📦', '🚩', '⚓', '🌐', '❓', '⭐', '🔥', '✨', '🧊', '🎯', '🗂️'],
   },
 ];

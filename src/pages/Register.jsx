@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import AuthLayout from './AuthLayout';
-import Field from '../components/ui/Field';
+import AuthLayout, { AuthCard } from './AuthLayout';
 import TextInput from '../components/ui/TextInput';
 import Button from '../components/ui/Button';
-import Icon from '../components/ui/Icon';
-import { useAuth } from '../contexts/AuthContext';
-import { isValidEmail, isNonEmpty, isStrongPassword, maxLength } from '../utils/validators';
+import IconButton from '../components/ui/IconButton';
 import { GoogleIcon } from './Login';
+import { useAuth } from '../contexts/AuthContext';
+import { useT } from '../i18n';
+import { isValidEmail, isNonEmpty, isStrongPassword, maxLength } from '../utils/validators';
 
 export default function Register() {
+  const t = useT();
   const { register, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
@@ -23,13 +24,13 @@ export default function Register() {
     const errs = {};
     const name = form.name.trim();
     const email = form.email.trim();
-    if (!isNonEmpty(name)) errs.name = 'Vui lòng nhập họ tên.';
-    else if (!maxLength(name, 60)) errs.name = 'Họ tên tối đa 60 ký tự.';
-    if (!isNonEmpty(email)) errs.email = 'Vui lòng nhập email.';
-    else if (!isValidEmail(email)) errs.email = 'Email không hợp lệ.';
-    if (!isNonEmpty(form.password)) errs.password = 'Vui lòng nhập mật khẩu.';
-    else if (!isStrongPassword(form.password)) errs.password = 'Mật khẩu tối thiểu 6 ký tự.';
-    if (form.confirm !== form.password) errs.confirm = 'Mật khẩu nhập lại không khớp.';
+    if (!isNonEmpty(name)) errs.name = t('settings.nameRequired');
+    else if (!maxLength(name, 60)) errs.name = t('settings.nameMax');
+    if (!isNonEmpty(email)) errs.email = t('auth.emailRequired');
+    else if (!isValidEmail(email)) errs.email = t('auth.error.invalidEmail');
+    if (!isNonEmpty(form.password)) errs.password = t('auth.passwordRequired');
+    else if (!isStrongPassword(form.password)) errs.password = t('settings.pwMin');
+    if (form.confirm !== form.password) errs.confirm = t('settings.pwMismatch');
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -41,11 +42,9 @@ export default function Register() {
     const res = await register(form.name, form.email.trim(), form.password);
     setLoading(false);
     if (res.success) {
-      toast.success('Tạo tài khoản thành công!');
+      toast.success(t('auth.registered'));
       navigate('/', { replace: true });
-    } else {
-      toast.error(res.error);
-    }
+    } else toast.error(res.error);
   }
 
   async function handleGoogle() {
@@ -53,94 +52,56 @@ export default function Register() {
     const res = await loginWithGoogle();
     setGoogleLoading(false);
     if (res.success) {
-      toast.success('Tạo tài khoản thành công!');
+      toast.success(t('auth.registered'));
       navigate('/', { replace: true });
-    } else if (res.error) {
-      toast.error(res.error);
-    }
+    } else if (res.error) toast.error(res.error);
   }
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   return (
     <AuthLayout>
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Tạo tài khoản mới</h1>
-      <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">Bắt đầu quản lý chi tiêu thông minh hơn ngay hôm nay.</p>
+      <AuthCard>
+        <h1 className="text-headline-sm text-on-surface">{t('auth.registerTitle')}</h1>
+        <p className="mt-2 text-body-lg text-on-surface-variant">{t('auth.registerSub')}</p>
 
-      <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4" noValidate>
-        <Field label="Họ và tên" required error={errors.name}>
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4" noValidate>
+          <TextInput label={t('settings.fullName')} icon="person" value={form.name} onChange={set('name')} onBlur={(e) => setForm((f) => ({ ...f, name: e.target.value.trim() }))} error={errors.name} autoComplete="name" />
+          <TextInput label="Email" icon="mail" type="email" value={form.email} onChange={set('email')} error={errors.email} autoComplete="email" />
           <TextInput
-            icon="person"
-            placeholder="Nguyễn Văn A"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            onBlur={(e) => setForm((f) => ({ ...f, name: e.target.value.trim() }))}
-            error={errors.name}
-            autoComplete="name"
-          />
-        </Field>
-        <Field label="Email" required error={errors.email}>
-          <TextInput
-            icon="mail"
-            type="email"
-            placeholder="ban@email.com"
-            value={form.email}
-            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            error={errors.email}
-            autoComplete="email"
-          />
-        </Field>
-        <Field label="Mật khẩu" required error={errors.password} hint="Tối thiểu 6 ký tự">
-          <div className="relative">
-            <TextInput
-              icon="lock"
-              type={showPw ? 'text' : 'password'}
-              placeholder="Tạo mật khẩu"
-              value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              error={errors.password}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPw((s) => !s)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
-              tabIndex={-1}
-            >
-              <Icon name={showPw ? 'visibility_off' : 'visibility'} size={20} />
-            </button>
-          </div>
-        </Field>
-        <Field label="Nhập lại mật khẩu" required error={errors.confirm}>
-          <TextInput
-            icon="lock_reset"
+            label={t('auth.password')}
+            icon="lock"
             type={showPw ? 'text' : 'password'}
-            placeholder="Nhập lại mật khẩu"
-            value={form.confirm}
-            onChange={(e) => setForm((f) => ({ ...f, confirm: e.target.value }))}
-            error={errors.confirm}
+            hint={t('settings.pwMinHint')}
+            value={form.password}
+            onChange={set('password')}
+            error={errors.password}
             autoComplete="new-password"
+            trailing={<IconButton icon={showPw ? 'visibility_off' : 'visibility'} label={showPw ? t('auth.hidePassword') : t('auth.showPassword')} onClick={() => setShowPw((s) => !s)} className="-mr-2" />}
           />
-        </Field>
-        <Button type="submit" size="lg" loading={loading} className="w-full">
-          Tạo tài khoản
+          <TextInput label={t('settings.pwConfirm')} icon="lock_reset" type={showPw ? 'text' : 'password'} value={form.confirm} onChange={set('confirm')} error={errors.confirm} autoComplete="new-password" />
+          <Button type="submit" size="lg" loading={loading} className="w-full">
+            {t('auth.createAccount')}
+          </Button>
+        </form>
+
+        <div className="my-5 flex items-center gap-3 text-body-sm text-on-surface-variant">
+          <div className="h-px flex-1 bg-outline-variant" />
+          {t('auth.or')}
+          <div className="h-px flex-1 bg-outline-variant" />
+        </div>
+
+        <Button type="button" variant="outlined" size="lg" className="w-full !text-on-surface" loading={googleLoading} onClick={handleGoogle}>
+          <GoogleIcon /> {t('auth.googleRegister')}
         </Button>
-      </form>
 
-      <div className="my-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-        <span className="text-xs text-zinc-400">hoặc</span>
-        <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-      </div>
-
-      <Button type="button" variant="outline" size="lg" className="w-full" loading={googleLoading} onClick={handleGoogle}>
-        <GoogleIcon /> Đăng ký với Google
-      </Button>
-
-      <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-        Đã có tài khoản?{' '}
-        <Link to="/login" className="font-semibold text-accent-600 hover:underline">
-          Đăng nhập
-        </Link>
-      </p>
+        <p className="mt-6 text-center text-body-md text-on-surface-variant">
+          {t('auth.haveAccount')}{' '}
+          <Link to="/login" className="font-bold text-primary hover:underline">
+            {t('auth.login')}
+          </Link>
+        </p>
+      </AuthCard>
     </AuthLayout>
   );
 }

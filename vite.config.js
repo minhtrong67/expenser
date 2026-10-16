@@ -1,34 +1,49 @@
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+  build: {
+    rolldownOptions: {
+      output: {
+        // Stable vendor chunks: better long-term caching, and the heavy
+        // libraries stay out of the pages that never use them.
+        codeSplitting: {
+          groups: [
+            { name: 'react-vendor', test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/, priority: 30 },
+            { name: 'firebase-auth', test: /node_modules[\\/](@firebase[\\/]auth|firebase[\\/]auth)[\\/]/, priority: 25 },
+            { name: 'firebase-db', test: /node_modules[\\/](@firebase[\\/]firestore|firebase[\\/]firestore|@grpc|protobufjs)[\\/]/, priority: 25 },
+            { name: 'firebase-core', test: /node_modules[\\/](@firebase|firebase|idb)[\\/]/, priority: 20 },
+            { name: 'charts', test: /node_modules[\\/](recharts|d3-[^\\/]+|victory-vendor|recharts-scale|decimal\.js-light|es-toolkit|immer|reselect|redux|@reduxjs)[\\/]/, priority: 20 },
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/apple-touch-icon.png'],
+      includeAssets: ['icons/apple-touch-icon.png', 'favicon.svg', 'landing.html', 'og-image.png'],
       manifest: {
+        id: '/',
         name: 'Expenser - Quản lý chi tiêu cá nhân',
         short_name: 'Expenser',
-        description: 'Expenser - ứng dụng quản lý chi tiêu cá nhân: theo dõi thu chi, ví và thống kê chi tiêu.',
+        description: 'Expenser - quản lý chi tiêu cá nhân: theo dõi thu chi, ví và thống kê. Personal expense tracker.',
         lang: 'vi',
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#16A34A',
-        // Dark-mode override for the manifest's static splash-screen colors.
-        // Not yet universally supported (Chromium/WebKit are still rolling
-        // it out), but browsers that don't recognize it simply ignore it -
-        // the light values above remain the fallback, so this is purely
-        // additive and safe to ship ahead of full support.
-        color_scheme_dark: {
-          background_color: '#09090b',
-          theme_color: '#09090b',
-        },
-        orientation: 'portrait-primary',
+        background_color: '#F8F9FF',
+        theme_color: '#36618E',
+        categories: ['finance', 'productivity'],
+        // Dark-mode override for splash colours (ignored by browsers without support)
+        color_scheme_dark: { background_color: '#111418', theme_color: '#111418' },
         icons: [
           { src: '/icons/icon-72.png', sizes: '72x72', type: 'image/png' },
           { src: '/icons/icon-96.png', sizes: '96x96', type: 'image/png' },
@@ -43,20 +58,22 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
-        navigateFallbackDenylist: [/^\/__/],
+        cleanupOutdatedCaches: true,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,woff2}'],
+        // Export libraries + the embedded PDF font are large and rarely used:
+        // fetch them on demand (then cache) instead of pre-caching on install.
+        globIgnores: ['**/exceljs*', '**/jspdf*', '**/html2canvas*', '**/robotoVietnamese*', '**/generateScheme*', '**/purify*', '**/index.es*', '**/og-image.png'],
+        // landing.html is a standalone page, not part of the SPA
+        navigateFallbackDenylist: [/^\/__/, /^\/landing\.html/, /^\/robots\.txt/, /^\/sitemap\.xml/],
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /\/assets\/(exceljs|jspdf|html2canvas|robotoVietnamese|generateScheme|purify|index\.es)[^/]*\.js$/.test(url.pathname),
             handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
+            options: { cacheName: 'lazy-export-libs', expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 90 } },
           },
         ],
       },
       devOptions: { enabled: false },
     }),
   ],
-})
+});

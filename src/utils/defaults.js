@@ -1,28 +1,30 @@
+// `key` is an i18n key: default names are translated into the user's language
+// at the moment their account is first seeded.
 export const DEFAULT_EXPENSE_CATEGORIES = [
-  { name: 'Ăn uống', emoji: '🍔', color: '#F97316' },
-  { name: 'Di chuyển', emoji: '🚗', color: '#3B82F6' },
-  { name: 'Mua sắm', emoji: '🛍️', color: '#EC4899' },
-  { name: 'Giải trí', emoji: '🎮', color: '#8B5CF6' },
-  { name: 'Học tập', emoji: '📚', color: '#06B6D4' },
-  { name: 'Hóa đơn', emoji: '🧾', color: '#EF4444' },
-  { name: 'Sức khỏe', emoji: '❤️‍🩹', color: '#10B981' },
-  { name: 'Nhà ở', emoji: '🏠', color: '#F59E0B' },
-  { name: 'Khác', emoji: '📦', color: '#64748B' },
+  { key: 'defaults.cat.food', emoji: '🍔', color: '#F97316' },
+  { key: 'defaults.cat.transport', emoji: '🚗', color: '#3B82F6' },
+  { key: 'defaults.cat.shopping', emoji: '🛍️', color: '#EC4899' },
+  { key: 'defaults.cat.entertainment', emoji: '🎮', color: '#8B5CF6' },
+  { key: 'defaults.cat.education', emoji: '📚', color: '#06B6D4' },
+  { key: 'defaults.cat.bills', emoji: '🧾', color: '#EF4444' },
+  { key: 'defaults.cat.health', emoji: '❤️‍🩹', color: '#10B981' },
+  { key: 'defaults.cat.housing', emoji: '🏠', color: '#F59E0B' },
+  { key: 'defaults.cat.other', emoji: '📦', color: '#64748B' },
 ];
 
 export const DEFAULT_INCOME_CATEGORIES = [
-  { name: 'Lương', emoji: '💰', color: '#10B981' },
-  { name: 'Thưởng', emoji: '🎁', color: '#F59E0B' },
-  { name: 'Freelance', emoji: '💻', color: '#3B82F6' },
-  { name: 'Đầu tư', emoji: '📈', color: '#8B5CF6' },
-  { name: 'Được cho/tặng', emoji: '🎀', color: '#EC4899' },
-  { name: 'Khác', emoji: '📦', color: '#64748B' },
+  { key: 'defaults.cat.salary', emoji: '💰', color: '#10B981' },
+  { key: 'defaults.cat.bonus', emoji: '🎁', color: '#F59E0B' },
+  { key: 'defaults.cat.freelance', emoji: '💻', color: '#3B82F6' },
+  { key: 'defaults.cat.investment', emoji: '📈', color: '#8B5CF6' },
+  { key: 'defaults.cat.gift', emoji: '🎀', color: '#EC4899' },
+  { key: 'defaults.cat.other', emoji: '📦', color: '#64748B' },
 ];
 
 export const DEFAULT_WALLETS = [
-  { name: 'Tiền mặt', icon: 'payments', color: '#10B981', balance: 0 },
-  { name: 'Ngân hàng', icon: 'account_balance', color: '#3B82F6', balance: 0 },
-  { name: 'Ví điện tử', icon: 'qr_code_2', color: '#8B5CF6', balance: 0 },
+  { key: 'defaults.wallet.cash', icon: 'payments', color: '#10B981', balance: 0 },
+  { key: 'defaults.wallet.bank', icon: 'account_balance', color: '#3B82F6', balance: 0 },
+  { key: 'defaults.wallet.ewallet', icon: 'qr_code_2', color: '#8B5CF6', balance: 0 },
 ];
 
 export const WALLET_ICONS = [

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /landing.html
+Disallow: /transactions
+Disallow: /categories
+Disallow: /wallets
+Disallow: /statistics
+Disallow: /settings
+
+Sitemap: https://expenser-quan-ly-chi-tieu.vercel.app/sitemap.xml

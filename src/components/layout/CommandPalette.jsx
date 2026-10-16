@@ -3,8 +3,12 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../ui/Icon';
 import { NAV_ITEMS } from './navConfig';
+import { useT } from '../../i18n';
+import { useSettings } from '../../contexts/SettingsContext';
 
 export default function CommandPalette({ open, onClose, onAddTransaction }) {
+  const t = useT();
+  const { cycleThemeMode, toggleLanguage } = useSettings();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef(null);
@@ -12,48 +16,36 @@ export default function CommandPalette({ open, onClose, onAddTransaction }) {
 
   const actions = useMemo(
     () => [
-      { id: 'add-tx', label: 'Thêm giao dịch mới', icon: 'add_circle', run: () => onAddTransaction?.() },
-      ...NAV_ITEMS.map((n) => ({
-        id: n.to,
-        label: `Đi tới: ${n.label}`,
-        icon: n.icon,
-        run: () => navigate(n.to),
-      })),
+      { id: 'add-tx', label: t('palette.addTransaction'), icon: 'add_circle', run: () => onAddTransaction?.() },
+      ...NAV_ITEMS.map((n) => ({ id: n.to, label: t('palette.goTo', { page: t(n.labelKey) }), icon: n.icon, run: () => navigate(n.to) })),
+      { id: 'theme', label: t('palette.toggleTheme'), icon: 'brightness_auto', run: cycleThemeMode },
+      { id: 'lang', label: t('palette.toggleLanguage'), icon: 'translate', run: toggleLanguage },
     ],
-    [navigate, onAddTransaction]
+    [t, navigate, onAddTransaction, cycleThemeMode, toggleLanguage],
   );
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return actions;
     const q = query.trim().toLowerCase();
-    return actions.filter((a) => a.label.toLowerCase().includes(q));
+    return q ? actions.filter((a) => a.label.toLowerCase().includes(q)) : actions;
   }, [actions, query]);
 
   useEffect(() => {
-    if (open) {
-      setQuery('');
-      setActiveIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 30);
-    }
+    if (!open) return undefined;
+    const id = setTimeout(() => inputRef.current?.focus(), 30);
+    return () => clearTimeout(id);
   }, [open]);
 
   useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
-
-  useEffect(() => {
+    if (!open) return undefined;
     function onKey(e) {
-      if (!open) return;
       if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowDown') {
+      else if (e.key === 'ArrowDown') {
         e.preventDefault();
         setActiveIndex((i) => Math.min(i + 1, filtered.length - 1));
-      }
-      if (e.key === 'ArrowUp') {
+      } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setActiveIndex((i) => Math.max(i - 1, 0));
-      }
-      if (e.key === 'Enter') {
+      } else if (e.key === 'Enter') {
         e.preventDefault();
         const item = filtered[activeIndex];
         if (item) {
@@ -69,26 +61,25 @@ export default function CommandPalette({ open, onClose, onAddTransaction }) {
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 sm:pt-32">
-      <div className="absolute inset-0 animate-fade-in bg-zinc-900/40 backdrop-blur-sm dark:bg-zinc-950/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg animate-scale-in overflow-hidden rounded-2xl bg-white shadow-2xl mx-4 dark:bg-zinc-900">
-        <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3.5 dark:border-zinc-800">
-          <Icon name="search" className="text-zinc-400" />
+    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-20 sm:pt-28">
+      <div className="absolute inset-0 animate-fade-in bg-scrim/32" onClick={onClose} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" aria-label={t('common.search')} className="relative z-10 w-full max-w-lg animate-scale-in overflow-hidden rounded-4xl bg-surface-container-high shadow-elev-3">
+        <div className="flex items-center gap-3 px-5 py-3">
+          <Icon name="search" className="text-on-surface-variant" />
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm chức năng, trang, hoặc thao tác nhanh..."
-            className="flex-1 bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActiveIndex(0);
+            }}
+            placeholder={t('palette.placeholder')}
+            className="h-10 flex-1 bg-transparent text-body-lg text-on-surface outline-none placeholder:text-on-surface-variant"
           />
-          <kbd className="rounded-md border border-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 dark:border-zinc-700">
-            ESC
-          </kbd>
+          <kbd className="rounded border border-outline-variant px-1.5 py-0.5 text-label-sm text-on-surface-variant">ESC</kbd>
         </div>
-        <div className="max-h-80 overflow-y-auto p-2">
-          {filtered.length === 0 && (
-            <p className="px-3 py-8 text-center text-sm text-zinc-400">Không tìm thấy kết quả.</p>
-          )}
+        <div className="max-h-80 overflow-y-auto border-t border-outline-variant p-2">
+          {filtered.length === 0 && <p className="px-3 py-8 text-center text-body-md text-on-surface-variant">{t('common.noResults')}</p>}
           {filtered.map((item, i) => (
             <button
               key={item.id}
@@ -97,8 +88,8 @@ export default function CommandPalette({ open, onClose, onAddTransaction }) {
                 onClose();
               }}
               onMouseEnter={() => setActiveIndex(i)}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
-                i === activeIndex ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400' : 'text-zinc-600 dark:text-zinc-300'
+              className={`flex h-12 w-full items-center gap-3 rounded-full px-4 text-left text-body-lg transition-colors ${
+                i === activeIndex ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface'
               }`}
             >
               <Icon name={item.icon} size={20} />
@@ -108,6 +99,6 @@ export default function CommandPalette({ open, onClose, onAddTransaction }) {
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

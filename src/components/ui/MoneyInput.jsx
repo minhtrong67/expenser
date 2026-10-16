@@ -1,36 +1,55 @@
-import { useState, useEffect } from 'react';
+import { useId, useState } from 'react';
 import { formatNumber, parseMoneyInput } from '../../utils/format';
+import { MAX_AMOUNT } from '../../utils/validators';
+import { SupportingText } from './Field';
 
-export default function MoneyInput({ value, onChange, placeholder = '0', error, suffix = 'đ', autoFocus, id }) {
+/** Amount field that groups digits as you type (1.500.000 / 1,500,000). */
+export default function MoneyInput({ value, onChange, label, error, hint, suffix = '₫', autoFocus, id, className = '' }) {
+  const autoId = useId();
+  const inputId = id || autoId;
+  // Re-sync the visible text when the value is changed from outside (quick-fill, edit mode).
+  const [prev, setPrev] = useState(value);
   const [display, setDisplay] = useState(value ? formatNumber(value) : '');
-
-  useEffect(() => {
-    setDisplay(value === '' || value === undefined || value === null ? '' : formatNumber(value));
-  }, [value]);
+  if (prev !== value) {
+    setPrev(value);
+    if (parseMoneyInput(display) !== Number(value || 0)) {
+      setDisplay(value === '' || value === undefined || value === null ? '' : formatNumber(value));
+    }
+  }
 
   function handleChange(e) {
-    const raw = parseMoneyInput(e.target.value);
+    let raw = parseMoneyInput(e.target.value);
+    if (raw > MAX_AMOUNT) raw = MAX_AMOUNT;
     setDisplay(raw ? formatNumber(raw) : '');
+    setPrev(raw);
     onChange(raw);
   }
 
   return (
-    <div className="relative">
-      <input
-        id={id}
-        type="text"
-        inputMode="numeric"
-        autoFocus={autoFocus}
-        value={display}
-        onChange={handleChange}
-        placeholder={placeholder}
-        className={`w-full rounded-xl border bg-white px-4 py-3 pr-12 text-lg font-semibold tabular-nums text-zinc-900 outline-none transition placeholder:font-normal placeholder:text-zinc-400 focus:border-accent-500 dark:bg-zinc-900 dark:text-zinc-50 ${
-          error ? 'border-rose-400 focus:border-rose-500' : 'border-zinc-200 dark:border-zinc-700'
-        }`}
-      />
-      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-400">
-        {suffix}
-      </span>
+    <div className={className}>
+      <div className={`md-field ${error ? 'md-field-error' : ''}`}>
+        <div className="relative min-w-0 flex-1">
+          <input
+            id={inputId}
+            type="text"
+            inputMode="numeric"
+            autoFocus={autoFocus}
+            autoComplete="off"
+            placeholder=" "
+            value={display}
+            onChange={handleChange}
+            aria-invalid={!!error}
+            className="md-input text-title-lg font-medium tabular-nums"
+          />
+          {label && (
+            <label htmlFor={inputId} className="md-label">
+              {label} *
+            </label>
+          )}
+        </div>
+        <span className="text-title-md text-on-surface-variant">{suffix}</span>
+      </div>
+      <SupportingText error={error} hint={hint} />
     </div>
   );
 }

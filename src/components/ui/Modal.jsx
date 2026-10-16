@@ -1,81 +1,105 @@
-import { useEffect } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import Icon from './Icon';
+import { useT } from '../../i18n';
+import IconButton from './IconButton';
 
-export default function Modal({ open, onClose, title, children, size = 'md', footer }) {
+// Several dialogs can stack (e.g. a confirm over a form) - only unlock page
+// scrolling once the last one closes.
+let openCount = 0;
+
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+const DIALOG_WIDTH = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg' };
+
+/**
+ * Material 3 overlay.
+ *  - variant "dialog" (default): centred dialog on every screen size. For short
+ *    content and confirmations.
+ *  - variant "sheet": full-height side sheet (full-screen on phones, slides in
+ *    from the right on larger screens). For forms with many fields.
+ * Nothing is auto-focused (no keyboard popping up on phones); focus lands on
+ * the panel itself and is trapped inside until the overlay closes.
+ */
+export default function Modal({ open, onClose, title, children, size = 'md', variant = 'dialog', footer }) {
+  const t = useT();
+  const panelRef = useRef(null);
+  const titleId = useId();
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
-    if (!open) return;
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const previouslyFocused = document.activeElement;
+    openCount += 1;
+    document.body.style.overflow = 'hidden';
+
+    const panel = panelRef.current;
+    panel?.focus({ preventScroll: true });
+
     function onKey(e) {
-      if (e.key === 'Escape') onClose?.();
+      if (e.key === 'Escape') {
+        // Only the top-most overlay reacts.
+        const dialogs = document.querySelectorAll('[data-modal]');
+        if (dialogs[dialogs.length - 1] === panel) onCloseRef.current?.();
+      } else if (e.key === 'Tab' && panel) {
+        const items = [...panel.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+        if (!items.length) return;
+        const [first, last] = [items[0], items[items.length - 1]];
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === panel)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     }
     document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      openCount -= 1;
+      if (openCount <= 0) {
+        openCount = 0;
+        document.body.style.overflow = '';
+      }
+      previouslyFocused?.focus?.({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
-  // Full-screen sheet: covers the entire viewport (used for content-heavy
-  // forms like adding/editing a transaction or category) instead of the
-  // regular centered/bottom-sheet dialog.
-  if (size === 'full') {
-    return createPortal(
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-0 z-50 flex animate-slide-up flex-col bg-white dark:bg-zinc-900"
-        style={{
-          paddingTop: 'env(safe-area-inset-top, 0px)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        }}
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
-            aria-label="Đóng"
-          >
-            <Icon name="close" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-5 py-5">{children}</div>
-        {footer && <div className="shrink-0 border-t border-zinc-100 px-5 py-4 dark:border-zinc-800">{footer}</div>}
-      </div>,
-      document.body
-    );
-  }
-
-  const widthCls = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-2xl' }[size] || 'max-w-md';
+  const isSheet = variant === 'sheet';
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className={`fixed inset-0 z-50 flex ${isSheet ? 'justify-end' : 'items-center justify-center p-4'}`}>
+      <div className="absolute inset-0 animate-fade-in bg-scrim/32" onClick={onClose} aria-hidden="true" />
       <div
-        className="absolute inset-0 animate-fade-in bg-zinc-900/40 backdrop-blur-sm dark:bg-zinc-950/60"
-        onClick={onClose}
-      />
-      <div
+        ref={panelRef}
+        data-modal
         role="dialog"
         aria-modal="true"
-        className={`relative z-10 max-h-[92vh] w-full ${widthCls} animate-slide-up overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl dark:bg-zinc-900`}
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        style={isSheet ? { paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}
+        className={`relative z-10 flex w-full flex-col overflow-hidden bg-surface-container-high shadow-elev-3 outline-none ${
+          isSheet
+            ? 'h-dvh animate-sheet-right sm:max-w-xl sm:rounded-l-4xl'
+            : `max-h-[90dvh] animate-scale-in rounded-4xl ${DIALOG_WIDTH[size] || DIALOG_WIDTH.md}`
+        }`}
       >
-        <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
-            aria-label="Đóng"
-          >
-            <Icon name="close" />
-          </button>
+        <div className={`flex shrink-0 items-center gap-2 pb-2 ${isSheet ? 'px-4 pt-3 sm:px-6' : 'px-6 pt-5'}`}>
+          {isSheet && <IconButton icon="close" label={t('common.close')} onClick={onClose} className="-ml-2" />}
+          <h2 id={titleId} className={`min-w-0 flex-1 wrap-any text-on-surface ${isSheet ? 'text-title-lg' : 'text-headline-sm'}`}>
+            {title}
+          </h2>
+          {!isSheet && <IconButton icon="close" label={t('common.close')} onClick={onClose} className="-mr-3" />}
         </div>
-        <div className="max-h-[calc(92vh-64px)] overflow-y-auto px-5 py-5">{children}</div>
-        {footer && <div className="border-t border-zinc-100 px-5 py-4 dark:border-zinc-800">{footer}</div>}
+        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain py-3 ${isSheet ? 'px-4 sm:px-6' : 'px-6'}`}>{children}</div>
+        {footer && <div className={`shrink-0 border-outline-variant pt-3 ${isSheet ? 'border-t px-4 pb-4 sm:px-6' : 'px-6 pb-6'}`}>{footer}</div>}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

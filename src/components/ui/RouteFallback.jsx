@@ -1,7 +1,8 @@
+/** In-page loader for lazy pages: stays invisible unless loading takes longer than ~200 ms. */
 export default function RouteFallback() {
   return (
-    <div className="flex min-h-[50vh] items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-accent-600 dark:border-zinc-700 dark:border-t-accent-500" />
+    <div className="delayed-spinner flex min-h-[50vh] items-center justify-center" role="status" aria-live="polite">
+      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary-container border-t-primary" />
     </div>
   );
 }

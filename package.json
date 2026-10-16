@@ -1,18 +1,23 @@
 {
   "name": "expenser",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "i18n:check": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
-    "date-fns": "^4.4.0",
+    "@material/material-color-utilities": "^0.4.0",
+    "@napi-rs/canvas": "^1.0.11",
+    "esbuild": "^0.28.2",
     "exceljs": "^4.4.0",
     "firebase": "^12.18.0",
+    "html2canvas": "^1.4.1",
+    "jsdom": "^30.1.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.47.0",
@@ -21,8 +26,7 @@
     "react-dom": "^19.2.8",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.18.3",
-    "recharts": "^3.10.1",
-    "xlsx": "^0.18.5"
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
@@ -34,5 +38,20 @@
     "tailwindcss": "^3.4.19",
     "vite": "^8.2.2",
     "vite-plugin-pwa": "^1.3.0"
-  }
+  },
+  "description": "Expenser - personal expense tracker (React + Firebase PWA) with Material Design 3, Vietnamese/English.",
+  "license": "MIT",
+  "author": "minhtrong67",
+  "homepage": "https://expenser-quan-ly-chi-tieu.vercel.app/",
+  "keywords": [
+    "expense-tracker",
+    "personal-finance",
+    "react",
+    "vite",
+    "firebase",
+    "pwa",
+    "material-design-3",
+    "tailwindcss",
+    "vietnamese"
+  ]
 }

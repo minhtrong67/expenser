@@ -1,56 +1,46 @@
-import { useEffect, useRef, useState } from "react";
-import Button from "./Button";
-import Icon from "./Icon";
+import { useEffect, useRef, useState } from 'react';
+import Button from './Button';
+import Icon from './Icon';
 
-const FORMATS = [
-  { id: "excel", label: "Excel (.xlsx)", icon: "table_view" },
-  { id: "pdf", label: "PDF", icon: "picture_as_pdf" },
-  { id: "csv", label: "CSV", icon: "description" },
-];
-
-export default function ExportMenu({
-  label = "Xuất báo cáo",
-  onSelect,
-  disabled,
-  size = "sm",
-}) {
+/** Button + M3 menu. formats: [{ id, label, icon }]; shows a spinner on `busyId`. */
+export default function ExportMenu({ label, formats, onSelect, disabled, variant = 'tonal', size = 'md', busyId, align = 'right', className = '' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
-    function onClickOutside(e) {
+    if (!open) return undefined;
+    function onPointer(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
+    function onKey(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
 
   return (
-    <div className="relative" ref={ref}>
-      <Button
-        className="w-full"
-        variant="danger"
-        size={size}
-        icon="download"
-        disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
-      >
+    <div className={`relative ${className}`} ref={ref}>
+      <Button className="w-full" variant={variant} size={size} icon="download" disabled={disabled} loading={!!busyId} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
         {label}
       </Button>
       {open && (
-        <div className="absolute right-0 z-10 mt-1.5 w-48 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1.5 shadow-lg animate-scale-in dark:border-zinc-700 dark:bg-zinc-900">
-          {FORMATS.map((f) => (
+        <div role="menu" className={`absolute ${align === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'} z-30 mt-1 w-56 animate-menu-in overflow-hidden rounded-xl bg-surface-container py-2 shadow-elev-2`}>
+          {formats.map((f) => (
             <button
               key={f.id}
+              role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onSelect(f.id);
               }}
-              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="state-layer flex h-12 w-full items-center gap-3 px-4 text-left text-body-lg text-on-surface"
             >
-              <span className="text-zinc-400">
-                <Icon name={f.icon} size={18} />
-              </span>
+              <Icon name={f.icon} size={20} className="text-on-surface-variant" />
               {f.label}
             </button>
           ))}

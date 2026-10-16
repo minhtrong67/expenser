@@ -1,47 +1,44 @@
 import { NavLink } from 'react-router-dom';
 import Icon from '../ui/Icon';
 import { MOBILE_NAV_ITEMS } from './navConfig';
+import { useT } from '../../i18n';
 
-export default function MobileNav({ onAddClick }) {
-  const left = MOBILE_NAV_ITEMS.slice(0, 2);
-  const right = MOBILE_NAV_ITEMS.slice(2);
-
+export default function MobileNav() {
+  const t = useT();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-100 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden dark:border-zinc-800 dark:bg-zinc-900/95">
-      <div className="relative flex items-center justify-around px-2 py-2">
-        {left.map((item) => (
-          <NavItem key={item.to} item={item} />
-        ))}
-
-        <button
-          onClick={onAddClick}
-          className="relative -mt-8 flex h-14 w-14 items-center justify-center rounded-full bg-accent-600 text-white shadow-lg shadow-accent-600/40 transition active:scale-95"
-          aria-label="Thêm giao dịch"
-        >
-          <Icon name="add" size={28} />
-        </button>
-
-        {right.map((item) => (
-          <NavItem key={item.to} item={item} />
-        ))}
-      </div>
-    </nav>
-  );
-}
-
-function NavItem({ item }) {
-  return (
-    <NavLink
-      to={item.to}
-      end={item.end}
-      className={({ isActive }) =>
-        `flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[10px] font-medium transition ${
-          isActive ? 'text-accent-600 dark:text-accent-400' : 'text-zinc-400'
-        }`
-      }
-    >
-      <Icon name={item.icon} size={22} />
-      {item.label}
-    </NavLink>
+    <>
+      <nav
+        aria-label={t('nav.menu')}
+        className="fixed inset-x-0 bottom-0 z-30 bg-surface-container pb-[env(safe-area-inset-bottom)] shadow-elev-2 lg:hidden"
+      >
+        <div className="mx-auto flex h-20 max-w-xl items-stretch justify-around px-2">
+          {MOBILE_NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                `group flex flex-1 flex-col items-center justify-center gap-1 pt-3 text-label-md transition-colors ${
+                  isActive ? 'text-on-surface' : 'text-on-surface-variant'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`flex h-8 w-16 items-center justify-center rounded-full transition-all duration-300 ease-emphasized group-active:scale-95 ${
+                      isActive ? 'bg-secondary-container text-on-secondary-container' : ''
+                    }`}
+                  >
+                    <Icon name={item.icon} size={24} fill={isActive && false} />
+                  </span>
+                  <span className={isActive ? 'font-bold' : ''}>{t(item.labelKey)}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      </nav>
+    </>
   );
 }

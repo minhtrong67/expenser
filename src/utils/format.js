@@ -1,98 +1,102 @@
+// Locale-aware formatting helpers. The active locale is set once by
+// SettingsProvider (setFormatLocale) so every helper — including ones called
+// from non-component code like the exporters — follows the app language.
+let locale = 'vi-VN';
+let lang = 'vi';
+const cache = new Map();
+
+export function setFormatLocale(language) {
+  lang = language === 'en' ? 'en' : 'vi';
+  locale = lang === 'en' ? 'en-GB' : 'vi-VN';
+  cache.clear();
+}
+
+// Intl formatters are expensive to construct, so they are cached per locale.
+function formatter(kind, options) {
+  const key = `${locale}|${kind}|${JSON.stringify(options)}`;
+  let f = cache.get(key);
+  if (!f) {
+    f = kind === 'number' ? new Intl.NumberFormat(locale, options) : new Intl.DateTimeFormat(locale, options);
+    cache.set(key, f);
+  }
+  return f;
+}
+
+function toDate(date) {
+  return date instanceof Date ? date : new Date(date);
+}
+
 export function formatMoney(amount) {
   const n = Number(amount) || 0;
-  try {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `${new Intl.NumberFormat('vi-VN').format(n)}đ`;
-  }
+  return formatter('number', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n);
 }
 
 export function formatNumber(n) {
-  return new Intl.NumberFormat('vi-VN').format(Number(n) || 0);
+  return formatter('number', {}).format(Number(n) || 0);
 }
 
 // Parses a formatted money string like "1.500.000" back to a raw number
 export function parseMoneyInput(str) {
   if (typeof str === 'number') return str;
   if (!str) return 0;
-  const cleaned = String(str).replace(/[^\d-]/g, '');
+  const cleaned = String(str).replace(/[^\d]/g, '');
   return cleaned ? parseInt(cleaned, 10) : 0;
 }
 
-export function formatDate(date, opts = {}) {
-  const d = date instanceof Date ? date : new Date(date);
+export function formatDate(date) {
+  const d = toDate(date);
   if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    ...opts,
-  }).format(d);
+  return formatter('date', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
 }
 
 export function formatDateShort(date) {
-  const d = date instanceof Date ? date : new Date(date);
+  const d = toDate(date);
   if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' }).format(d);
+  return formatter('date', { day: '2-digit', month: '2-digit' }).format(d);
 }
 
-export function formatDateTime(date) {
-  const d = date instanceof Date ? date : new Date(date);
+export function formatTime(date) {
+  const d = toDate(date);
   if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(d);
+  return formatter('date', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+}
+
+export function formatMonthYear(date) {
+  const d = toDate(date);
+  if (Number.isNaN(d.getTime())) return '';
+  return lang === 'vi' ? `Tháng ${d.getMonth() + 1}/${d.getFullYear()}` : formatter('date', { month: 'long', year: 'numeric' }).format(d);
+}
+
+// e.g. "Thứ Ba, 22/09/2026" / "Tuesday, 22/09/2026" - day-section header in the list.
+export function formatDayHeader(date) {
+  const d = toDate(date);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${formatter('date', { weekday: 'long' }).format(d)}, ${formatDate(d)}`;
 }
 
 export function toInputDate(date) {
-  const d = date instanceof Date ? date : new Date(date);
+  const d = toDate(date);
   if (Number.isNaN(d.getTime())) return '';
   const tz = d.getTimezoneOffset() * 60000;
   return new Date(d.getTime() - tz).toISOString().slice(0, 10);
 }
 
-export function toInputTime(date) {
-  const d = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(d.getTime())) return '00:00';
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
 export function toInputDateTimeLocal(date) {
-  const d = date instanceof Date ? date : new Date(date);
+  const d = toDate(date);
   if (Number.isNaN(d.getTime())) return '';
   const tz = d.getTimezoneOffset() * 60000;
   return new Date(d.getTime() - tz).toISOString().slice(0, 16);
 }
 
-export function formatTime(date) {
-  const d = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(d);
-}
-
-const WEEKDAY_NAMES = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-
-// e.g. "Thứ 3, 22/09/2026" - used as the sticky section header when grouping
-// the transaction list by day.
-export function formatDayHeader(date) {
-  const d = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(d.getTime())) return '';
-  return `${WEEKDAY_NAMES[d.getDay()]}, ${formatDate(d)}`;
-}
-
-// "YYYY-MM-DD" key for grouping a list of transactions by calendar day
-// (local time, not UTC).
+// "YYYY-MM-DD" key for grouping by calendar day (local time, not UTC).
 export function dayKey(date) {
-  const d = date instanceof Date ? date : new Date(date);
+  const d = toDate(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function monthKey(date) {
+  const d = toDate(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 export function monthStartInput(date = new Date()) {
@@ -119,22 +123,20 @@ export function parseLocalDateEnd(str) {
   return d;
 }
 
+// 1.5tr / 200k (vi) or 1.5M / 200K (en) - for chart axes and calendar cells.
 export function formatCompactMoney(n) {
   const num = Number(n) || 0;
   const abs = Math.abs(num);
-  if (abs >= 1000000) {
-    const v = num / 1000000;
-    return `${Number.isInteger(v) ? v : v.toFixed(1)}tr`;
+  const unit = lang === 'en' ? { m: 'M', k: 'K' } : { m: 'tr', k: 'k' };
+  const decimal = lang === 'en' ? '.' : ',';
+  if (abs >= 1_000_000_000) {
+    const v = num / 1_000_000_000;
+    return `${(Number.isInteger(v) ? v : v.toFixed(1)).toString().replace('.', decimal)}${lang === 'en' ? 'B' : 'tỷ'}`;
   }
-  if (abs >= 1000) return `${Math.round(num / 1000)}k`;
+  if (abs >= 1_000_000) {
+    const v = num / 1_000_000;
+    return `${(Number.isInteger(v) ? v : v.toFixed(1)).toString().replace('.', decimal)}${unit.m}`;
+  }
+  if (abs >= 1000) return `${Math.round(num / 1000)}${unit.k}`;
   return String(num);
-}
-
-export function monthKey(date) {
-  const d = date instanceof Date ? date : new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-export function isSameMonth(dateA, monthKeyStr) {
-  return monthKey(dateA) === monthKeyStr;
 }

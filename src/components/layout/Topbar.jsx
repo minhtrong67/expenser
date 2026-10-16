@@ -1,65 +1,46 @@
-import Icon from "../ui/Icon";
-import { useSettings, THEME_MODES } from "../../contexts/SettingsContext";
+import Icon from '../ui/Icon';
+import IconButton from '../ui/IconButton';
+import { useSettings, THEME_MODES } from '../../contexts/SettingsContext';
+import { useI18n } from '../../i18n';
 
-export default function Topbar({
-  title,
-  subtitle,
-  onSearchClick,
-  onMenuClick,
-}) {
-  const { settings, cycleThemeMode } = useSettings();
-
-  const currentMode =
-    THEME_MODES.find((m) => m.id === settings.themeMode) || THEME_MODES[2];
+export default function Topbar({ title, scrolled, onSearchClick, onMenuClick }) {
+  const { t, lang } = useI18n();
+  const { settings, cycleThemeMode, toggleLanguage } = useSettings();
+  const currentMode = THEME_MODES.find((m) => m.id === settings.themeMode) || THEME_MODES[2];
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-zinc-100 bg-white/80 px-4 py-4 backdrop-blur sm:px-6 lg:px-8 dark:border-zinc-800 dark:bg-neutral-900/80">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <button
-          onClick={onMenuClick}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          aria-label="Ẩn/hiện thanh điều hướng"
-        >
-          <Icon name="menu" size={22} />
-        </button>
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-bold text-zinc-900 sm:text-xl dark:text-zinc-50">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="truncate text-xs text-zinc-400 sm:text-sm">
-              {subtitle}
-            </p>
-          )}
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <button
-          onClick={onSearchClick}
-          className="hidden items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm text-zinc-400 transition hover:border-zinc-300 sm:flex dark:border-zinc-700"
-        >
-          <Icon name="search" size={18} />
-          <span>Tìm kiếm</span>
-          <kbd className="rounded border border-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold dark:border-zinc-600">
-            Ctrl K
-          </kbd>
-        </button>
-        <button
-          onClick={onSearchClick}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 sm:hidden dark:border-zinc-700"
-          aria-label="Tìm kiếm"
-        >
-          <Icon name="search" />
-        </button>
-        <button
-          onClick={cycleThemeMode}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300"
-          aria-label="Đổi giao diện sáng / tối / hệ thống"
-          title={`Giao diện: ${currentMode.label} (chạm để đổi)`}
-        >
-          <Icon name={currentMode.icon} fill={currentMode.id !== "system"} />
-        </button>
-      </div>
+    <header
+      className={`sticky top-0 z-20 box-content flex h-14 items-center gap-1 px-2 transition-colors duration-300 sm:h-16 sm:gap-2 sm:px-4 lg:px-6 ${
+        scrolled ? 'bg-surface-container shadow-elev-1' : 'bg-surface'
+      }`}
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    >
+      <IconButton icon="menu" label={t('nav.toggleMenu')} onClick={onMenuClick} />
+      <h1 className="min-w-0 flex-1 wrap-any text-title-md text-on-surface sm:text-title-lg">{title}</h1>
+
+      <button
+        onClick={onSearchClick}
+        className="state-layer hidden h-10 items-center gap-2 rounded-full bg-surface-container-high px-4 text-body-md text-on-surface-variant sm:flex"
+      >
+        <Icon name="search" size={18} />
+        <span>{t('common.search')}</span>
+        <kbd className="rounded border border-outline-variant px-1.5 py-0.5 text-label-sm">Ctrl K</kbd>
+      </button>
+      <IconButton icon="search" label={t('common.search')} onClick={onSearchClick} className="sm:hidden" />
+      <button
+        onClick={toggleLanguage}
+        aria-label={t('topbar.switchLanguage')}
+        title={t('topbar.switchLanguage')}
+        className="state-layer ripple flex h-10 min-w-10 items-center justify-center gap-1 rounded-full px-2 text-label-lg text-on-surface-variant"
+      >
+        <Icon name="translate" size={18} />
+        {lang.toUpperCase()}
+      </button>
+      <IconButton
+        icon={currentMode.icon}
+        label={`${t('topbar.themeMode')}: ${t(currentMode.labelKey)}`}
+        onClick={cycleThemeMode}
+      />
     </header>
   );
 }

@@ -1,16 +1,20 @@
 import { Link } from 'react-router-dom';
 import Icon from '../components/ui/Icon';
+import { useT } from '../i18n';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 export default function NotFound() {
+  const t = useT();
+  usePageTitle(`${t('notFound.title')} · Expenser`);
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-6 text-center dark:bg-zinc-950">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-50 text-accent-600 dark:bg-accent-500/10">
-        <Icon name="search_off" size={32} />
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface px-6 text-center">
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-container text-on-primary-container">
+        <Icon name="search_off" size={36} />
       </span>
-      <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100">Không tìm thấy trang</h1>
-      <p className="text-sm text-zinc-400">Trang bạn tìm kiếm không tồn tại hoặc đã bị di chuyển.</p>
-      <Link to="/" className="rounded-xl bg-accent-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-700">
-        Về trang chủ
+      <h1 className="text-headline-sm text-on-surface">{t('notFound.title')}</h1>
+      <p className="max-w-sm text-body-lg text-on-surface-variant">{t('notFound.desc')}</p>
+      <Link to="/" className="state-layer ripple inline-flex h-10 items-center rounded-full bg-primary px-6 text-label-lg text-on-primary">
+        {t('notFound.home')}
       </Link>
     </div>
   );

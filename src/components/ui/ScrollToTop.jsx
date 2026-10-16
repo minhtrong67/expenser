@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import Icon from './Icon';
+import { useT } from '../../i18n';
+import IconButton from './IconButton';
 
 export default function ScrollToTop() {
+  const t = useT();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -16,12 +18,12 @@ export default function ScrollToTop() {
   if (!visible) return null;
 
   return (
-    <button
+    <IconButton
+      icon="arrow_upward"
+      label={t('common.scrollTop')}
+      variant="tonal"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      aria-label="Lên đầu trang"
-      className="fixed bottom-24 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-white text-zinc-600 shadow-lg ring-1 ring-zinc-200 transition hover:-translate-y-0.5 hover:text-accent-600 animate-fade-in lg:bottom-8 lg:right-8 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700"
-    >
-      <Icon name="arrow_upward" size={20} />
-    </button>
+      className="fixed bottom-[calc(10.5rem+env(safe-area-inset-bottom))] right-5 z-30 animate-scale-in shadow-elev-2 lg:bottom-8 lg:right-8"
+    />
   );
 }

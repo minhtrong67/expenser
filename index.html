@@ -2,73 +2,120 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#F8F9FF" />
     <meta name="color-scheme" content="light dark" />
 
     <!--
-      Applies the user's saved theme (or system preference) to <html> and to
-      the theme-color meta tag synchronously, before the stylesheet/app even
-      loads. Without this, the page always paints light-first and only
-      switches to dark once React mounts and SettingsContext's effect runs -
-      which is the white flash seen when opening the installed PWA in dark
-      mode. Kept in sync with SettingsContext.jsx's storage key/logic.
+      Paints the user's saved theme before the stylesheet and React load, so
+      there is no white flash (dark mode) and no colour jump (custom theme
+      colour). Mirrors the storage keys used by SettingsContext / src/theme.
     -->
     <script>
       (function () {
         try {
-          var raw = localStorage.getItem('qlct:settings');
-          var mode = raw ? JSON.parse(raw).themeMode || 'system' : 'system';
-          var prefersDark =
-            window.matchMedia &&
-            window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var dark = mode === 'dark' || (mode === 'system' && prefersDark);
-          if (dark) {
-            document.documentElement.classList.add('dark');
-            var meta = document.querySelector('meta[name="theme-color"]');
-            if (meta) meta.setAttribute('content', '#09090b');
+          var root = document.documentElement;
+          var s = JSON.parse(localStorage.getItem('qlct:settings') || '{}');
+          var mode = s.themeMode || 'system';
+          var dark = mode === 'dark' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) root.classList.add('dark');
+          var color = dark ? '#111418' : '#F8F9FF';
+          var c = JSON.parse(localStorage.getItem('qlct:scheme') || 'null');
+          if (c && c.seed === s.seedColor && c.css) {
+            root.style.cssText += ';' + (dark ? c.css.dark : c.css.light);
+            color = (dark ? c.scheme.dark : c.scheme.light).surface;
           }
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', color);
+          if (s.language === 'en') root.lang = 'en';
         } catch (e) {
-          /* localStorage unavailable (privacy mode, etc.) - fall back to light */
+          /* storage unavailable (private mode...) - defaults apply */
         }
       })();
     </script>
 
-    <title>Expenser — Quản lý chi tiêu cá nhân</title>
-    <meta name="description" content="Expenser - ứng dụng quản lý chi tiêu cá nhân: theo dõi thu chi, ví và thống kê chi tiêu." />
-    <meta name="keywords" content="quản lý chi tiêu, quản lý thu chi, sổ thu chi, ứng dụng tài chính cá nhân, expense tracker, personal finance app" />
+    <!-- Icons -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <!-- Primary SEO -->
+    <title>Expenser — Quản lý chi tiêu cá nhân thông minh | Smart expense tracker</title>
+    <meta name="description" content="Expenser: ứng dụng quản lý thu chi cá nhân miễn phí, mã nguồn mở. Theo dõi nhiều ví, thống kê trực quan, xuất báo cáo PDF/Excel, giao diện Material Design 3, song ngữ Việt - Anh, dùng được offline." />
+    <meta name="keywords" content="quản lý chi tiêu, quản lý thu chi, sổ thu chi, ứng dụng tài chính cá nhân, ghi chép chi tiêu, expense tracker, personal finance app, budget tracker, Material Design 3, PWA" />
     <meta name="author" content="minhtrong67" />
     <meta name="application-name" content="Expenser" />
-    <meta name="robots" content="noindex, nofollow" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="googlebot" content="index, follow" />
     <meta name="format-detection" content="telephone=no" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="generator" content="Vite + React" />
+    <link rel="canonical" href="https://expenser-quan-ly-chi-tieu.vercel.app/" />
+    <link rel="alternate" hreflang="vi" href="https://expenser-quan-ly-chi-tieu.vercel.app/" />
+    <link rel="alternate" hreflang="en" href="https://expenser-quan-ly-chi-tieu.vercel.app/" />
+    <link rel="alternate" hreflang="x-default" href="https://expenser-quan-ly-chi-tieu.vercel.app/" />
 
     <!-- PWA / mobile home-screen -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Expenser" />
-    <meta name="msapplication-TileColor" content="#16A34A" />
+    <meta name="msapplication-TileColor" content="#43A047" />
     <meta name="msapplication-TileImage" content="/icons/icon-192.png" />
 
-    <!-- Open Graph / Facebook, Zalo -->
+    <!-- Open Graph (Facebook, Zalo, Messenger, LinkedIn...) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Expenser" />
-    <meta property="og:title" content="Expenser — Quản lý chi tiêu cá nhân" />
-    <meta property="og:description" content="Theo dõi thu chi, quản lý ví và xem thống kê chi tiêu cá nhân một cách trực quan, đơn giản." />
-    <meta property="og:image" content="/icons/icon-512.png" />
+    <meta property="og:url" content="https://expenser-quan-ly-chi-tieu.vercel.app/" />
+    <meta property="og:title" content="Expenser — Quản lý chi tiêu cá nhân thông minh" />
+    <meta property="og:description" content="Theo dõi thu chi, quản lý nhiều ví, thống kê trực quan và xuất báo cáo. Material Design 3, đổi màu chủ đề, song ngữ Việt - Anh, mã nguồn mở." />
+    <meta property="og:image" content="https://expenser-quan-ly-chi-tieu.vercel.app/og-image.png" />
+    <meta property="og:image:secure_url" content="https://expenser-quan-ly-chi-tieu.vercel.app/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Expenser - ứng dụng quản lý chi tiêu cá nhân" />
     <meta property="og:locale" content="vi_VN" />
+    <meta property="og:locale:alternate" content="en_US" />
 
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Expenser — Quản lý chi tiêu cá nhân" />
-    <meta name="twitter:description" content="Theo dõi thu chi, quản lý ví và xem thống kê chi tiêu cá nhân một cách trực quan, đơn giản." />
-    <meta name="twitter:image" content="/icons/icon-512.png" />
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://expenser-quan-ly-chi-tieu.vercel.app/" />
+    <meta name="twitter:title" content="Expenser — Quản lý chi tiêu cá nhân thông minh" />
+    <meta name="twitter:description" content="Theo dõi thu chi, quản lý ví, thống kê và báo cáo. Material Design 3, song ngữ Việt - Anh, mã nguồn mở." />
+    <meta name="twitter:image" content="https://expenser-quan-ly-chi-tieu.vercel.app/og-image.png" />
+    <meta name="twitter:image:alt" content="Expenser - ứng dụng quản lý chi tiêu cá nhân" />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Expenser",
+        "alternateName": "Expenser - Quản lý chi tiêu cá nhân",
+        "url": "https://expenser-quan-ly-chi-tieu.vercel.app/",
+        "description": "Free, open-source personal expense tracker with multiple wallets, statistics, PDF/Excel reports and a Material Design 3 interface. Ứng dụng quản lý thu chi cá nhân miễn phí, mã nguồn mở.",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Any (Web, PWA)",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": ["vi", "en"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "VND" },
+        "license": "https://opensource.org/licenses/MIT",
+        "author": { "@type": "Person", "name": "minhtrong67" },
+        "image": "https://expenser-quan-ly-chi-tieu.vercel.app/og-image.png"
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="splash" role="status" aria-live="polite"><div class="splash-spinner"></div><div class="splash-name">Expenser</div></div></div>
+    <noscript>
+      <main style="font-family: system-ui, sans-serif; max-width: 640px; margin: 15vh auto; padding: 0 24px; line-height: 1.6">
+        <h1>Expenser</h1>
+        <p>Quản lý chi tiêu cá nhân: theo dõi thu chi, ví và thống kê. Vui lòng bật JavaScript để sử dụng ứng dụng.</p>
+        <p>Personal expense tracker: income &amp; expenses, wallets and statistics. Please enable JavaScript to use the app.</p>
+        <p><a href="/landing.html">Giới thiệu / Introduction</a></p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

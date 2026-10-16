@@ -1,115 +1,89 @@
-import { useMemo } from "react";
-import { useOutletContext, Link } from "react-router-dom";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import Icon from "../components/ui/Icon";
-import Emoji from "../components/ui/Emoji";
-import {
-  CardSkeleton,
-  ChartSkeleton,
-  RowSkeleton,
-} from "../components/ui/Skeleton";
-import { useData } from "../contexts/DataContext";
-import { getCategoryEmoji } from "../utils/categoryEmoji";
-import {
-  formatMoney,
-  formatDateShort,
-  formatTime,
-  monthKey,
-} from "../utils/format";
+import { useMemo } from 'react';
+import { useOutletContext, Link } from 'react-router-dom';
+import { ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts';
+import Icon from '../components/ui/Icon';
+import Emoji from '../components/ui/Emoji';
+import EmptyState from '../components/ui/EmptyState';
+import { CardSkeleton, ChartSkeleton } from '../components/ui/Skeleton';
+import { useData } from '../contexts/DataContext';
+import { useI18n } from '../i18n';
+import { useChartTheme } from '../hooks/useChartTheme';
+import { getCategoryEmoji } from '../utils/categoryEmoji';
+import { formatMoney, formatDateShort, formatTime } from '../utils/format';
 
 function ChangeBadge({ current, previous }) {
+  const { t } = useI18n();
   if (!previous) return null;
-  const diff = current - previous;
-  const pct =
-    previous === 0
-      ? current > 0
-        ? 100
-        : 0
-      : Math.round((diff / previous) * 100);
-  const positive = diff >= 0;
+  const pct = Math.round(((current - previous) / previous) * 100);
+  const up = pct >= 0;
   return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold ${positive ? "text-emerald-600" : "text-rose-500"}`}
-    >
-      <Icon name={positive ? "trending_up" : "trending_down"} size={14} />
-      {Math.abs(pct)}%
-      <span className="hidden sm:inline">&nbsp;so với tháng trước</span>
+    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-surface/60 px-2 py-0.5 text-label-sm font-bold">
+      <Icon name={up ? 'trending_up' : 'trending_down'} size={13} />
+      {Math.abs(pct)}%<span className="hidden font-normal sm:inline">&nbsp;{t('dashboard.vsLastMonth')}</span>
     </span>
   );
 }
 
+function SummaryCard({ icon, label, value, tone, badge, valueClass = '' }) {
+  return (
+    <div className={`rounded-2xl p-4 transition-shadow duration-200 hover:shadow-elev-1 sm:p-5 ${tone}`}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface/50">
+          <Icon name={icon} size={20} />
+        </span>
+        {badge}
+      </div>
+      <p className="text-label-md opacity-80">{label}</p>
+      <p className={`mt-1 wrap-any text-title-md font-bold tabular-nums leading-tight sm:text-title-lg lg:text-headline-sm ${valueClass}`}>{value}</p>
+    </div>
+  );
+}
+
+function Card({ title, action, children, className = '' }) {
+  return (
+    <section className={`rounded-2xl bg-surface-container-low p-5 ${className}`}>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-title-md text-on-surface">{title}</h3>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export default function Dashboard() {
-  const {
-    transactions,
-    categories,
-    wallets,
-    stats,
-    loading,
-    getCategory,
-    getWallet,
-  } = useData();
+  const { t } = useI18n();
+  const chart = useChartTheme();
+  const { transactions, categories, wallets, stats, loading, getCategory } = useData();
   const { openAddTx } = useOutletContext();
 
-  const dailySeries = useMemo(() => {
-    const now = new Date();
-    const daysInMonth = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0,
-    ).getDate();
-    const map = Array.from({ length: daysInMonth }, (_, i) => ({
-      day: i + 1,
-      thu: 0,
-      chi: 0,
-    }));
-    stats.thisMonthTx.forEach((t) => {
-      const d = t.date.getDate() - 1;
-      if (map[d]) {
-        if (t.type === "income") map[d].thu += t.amount;
-        else map[d].chi += t.amount;
-      }
-    });
-    return map;
-  }, [stats.thisMonthTx]);
+  // This month's income vs expenses, as the two slices of a donut.
+  const incomeExpense = useMemo(() => {
+    const total = stats.monthIncome + stats.monthExpense;
+    return [
+      { key: 'income', name: t('tx.income'), value: stats.monthIncome, color: chart.income, pct: total ? Math.round((stats.monthIncome / total) * 100) : 0 },
+      { key: 'expense', name: t('tx.expense'), value: stats.monthExpense, color: chart.expense, pct: total ? Math.round((stats.monthExpense / total) * 100) : 0 },
+    ];
+  }, [stats.monthIncome, stats.monthExpense, chart.income, chart.expense, t]);
 
   const categoryBreakdown = useMemo(() => {
     const byCategory = {};
-    stats.thisMonthTx
-      .filter((t) => t.type === "expense")
-      .forEach((t) => {
-        byCategory[t.categoryId] = (byCategory[t.categoryId] || 0) + t.amount;
-      });
+    stats.thisMonthTx.forEach((tx) => {
+      if (tx.type === 'expense') byCategory[tx.categoryId] = (byCategory[tx.categoryId] || 0) + tx.amount;
+    });
     return Object.entries(byCategory)
-      .map(([catId, value]) => {
-        const cat = getCategory(catId);
-        return {
-          name: cat?.name || "Khác",
-          value,
-          color: cat?.color || "#94A3B8",
-        };
+      .map(([id, value]) => {
+        const cat = getCategory(id);
+        return { name: cat?.name || t('common.other'), value, color: cat?.color || '#94A3B8' };
       })
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
-  }, [stats.thisMonthTx, getCategory]);
-
-  const recent = transactions.slice(0, 6);
-  const remaining = stats.monthIncome - stats.monthExpense;
+  }, [stats.thisMonthTx, getCategory, t]);
 
   if (loading) {
     return (
-      <div className="space-y-5">
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="space-y-4 sm:space-y-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <CardSkeleton key={i} />
           ))}
@@ -119,320 +93,159 @@ export default function Dashboard() {
     );
   }
 
-  const noWallets = wallets.length === 0;
-  const noCategories = categories.length === 0;
+  const recent = transactions.slice(0, 6);
+  const remaining = stats.monthIncome - stats.monthExpense;
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      {(noWallets || noCategories) && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-          <Icon name="info" className="mt-0.5 shrink-0" />
-          <span>
-            Đang khởi tạo ví và danh mục mặc định cho bạn. Vui lòng chờ trong
-            giây lát hoặc tải lại trang.
-          </span>
+    <div className="space-y-4 sm:space-y-5">
+      {(wallets.length === 0 || categories.length === 0) && (
+        <div className="flex items-start gap-3 rounded-2xl bg-tertiary-container p-4 text-body-md text-on-tertiary-container">
+          <Icon name="info" className="mt-0.5" />
+          <span>{t('dashboard.initializing')}</span>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <SummaryCard
-          icon="account_balance_wallet"
-          label="Tổng số dư"
-          value={formatMoney(stats.totalBalance)}
-          iconBg="bg-accent-50 text-accent-600 dark:bg-accent-500/10"
-        />
+        <SummaryCard icon="account_balance_wallet" label={t('dashboard.totalBalance')} value={formatMoney(stats.totalBalance)} tone="bg-primary-container text-on-primary-container" />
         <SummaryCard
           icon="arrow_upward"
-          label="Thu nhập tháng này"
+          label={t('dashboard.monthIncome')}
           value={formatMoney(stats.monthIncome)}
-          iconBg="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"
-          badge={
-            <ChangeBadge
-              current={stats.monthIncome}
-              previous={stats.lastMonthIncome}
-            />
-          }
+          tone="bg-income-container text-on-income-container"
+          badge={<ChangeBadge current={stats.monthIncome} previous={stats.lastMonthIncome} />}
         />
         <SummaryCard
           icon="arrow_downward"
-          label="Chi tiêu tháng này"
+          label={t('dashboard.monthExpense')}
           value={formatMoney(stats.monthExpense)}
-          iconBg="bg-rose-50 text-rose-600 dark:bg-rose-500/10"
-          badge={
-            <ChangeBadge
-              current={stats.monthExpense}
-              previous={stats.lastMonthExpense}
-            />
-          }
+          tone="bg-expense-container text-on-expense-container"
+          badge={<ChangeBadge current={stats.monthExpense} previous={stats.lastMonthExpense} />}
         />
-        <SummaryCard
-          icon="savings"
-          label="Còn lại tháng này"
-          value={formatMoney(remaining)}
-          iconBg="bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10"
-          valueClass={remaining < 0 ? "text-rose-500" : ""}
-        />
+        <SummaryCard icon="savings" label={t('dashboard.remaining')} value={formatMoney(remaining)} tone="bg-tertiary-container text-on-tertiary-container" valueClass={remaining < 0 ? 'text-expense' : ''} />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-100 bg-white p-5 lg:col-span-2 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-              Thu chi theo ngày trong tháng
-            </h3>
-          </div>
-          {dailySeries.every((d) => d.thu === 0 && d.chi === 0) ? (
-            <EmptyState
-              icon="show_chart"
-              text="Chưa có giao dịch nào trong tháng này."
-            />
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-2">
+        <Card title={t('dashboard.incomeExpense')}>
+          {stats.monthIncome + stats.monthExpense === 0 ? (
+            <EmptyState icon="donut_large" text={t('dashboard.noMonthTx')} />
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={dailySeries}>
-                <defs>
-                  <linearGradient id="thuGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="chiGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#F43F5E" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="currentColor"
-                  className="text-zinc-100 dark:text-zinc-800"
-                />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tickFormatter={(v) =>
-                    v >= 1000000
-                      ? `${v / 1000000}tr`
-                      : v >= 1000
-                        ? `${v / 1000}k`
-                        : v
-                  }
-                  tick={{ fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={40}
-                />
-                <Tooltip
-                  formatter={(v) => formatMoney(v)}
-                  labelFormatter={(d) => `Ngày ${d}`}
-                  contentStyle={{
-                    borderRadius: 12,
-                    border: "1px solid rgb(226 232 240)",
-                    fontSize: 12,
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="thu"
-                  name="Thu nhập"
-                  stroke="#10B981"
-                  fill="url(#thuGrad)"
-                  strokeWidth={2}
-                  isAnimationActive={false}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="chi"
-                  name="Chi tiêu"
-                  stroke="#F43F5E"
-                  fill="url(#chiGrad)"
-                  strokeWidth={2}
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <>
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={incomeExpense} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88} paddingAngle={incomeExpense.every((x) => x.value > 0) ? 3 : 0} stroke="none" isAnimationActive={false}>
+                      {incomeExpense.map((entry) => (
+                        <Cell key={entry.key} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip {...chart.tooltip} formatter={(v) => formatMoney(v)} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-12 text-center">
+                  <span className="text-label-md text-on-surface-variant">{t('dashboard.remaining')}</span>
+                  <span className={`wrap-any text-title-md font-bold tabular-nums ${remaining < 0 ? 'text-expense' : 'text-on-surface'}`}>{formatMoney(remaining)}</span>
+                </div>
+              </div>
+              <ul className="mt-3 space-y-2">
+                {incomeExpense.map((x) => (
+                  <li key={x.key} className="flex items-center justify-between gap-3 text-body-md">
+                    <span className="flex min-w-0 items-center gap-2 text-on-surface-variant">
+                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: x.color }} />
+                      <span className="wrap-any">{x.name}</span>
+                      <span className="text-label-md">({x.pct}%)</span>
+                    </span>
+                    <span className="font-medium tabular-nums text-on-surface">{formatMoney(x.value)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-zinc-100 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <h3 className="mb-4 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-            Chi tiêu theo danh mục
-          </h3>
+        <Card title={t('dashboard.byCategory')}>
           {categoryBreakdown.length === 0 ? (
-            <EmptyState icon="donut_large" text="Chưa có dữ liệu chi tiêu." />
+            <EmptyState icon="donut_large" text={t('dashboard.noExpense')} />
           ) : (
             <>
               <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
-                  <Pie
-                    data={categoryBreakdown}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={50}
-                    outerRadius={75}
-                    paddingAngle={2}
-                    isAnimationActive={false}
-                  >
+                  <Pie data={categoryBreakdown} dataKey="value" nameKey="name" innerRadius={50} outerRadius={78} paddingAngle={2} stroke="none" isAnimationActive={false}>
                     {categoryBreakdown.map((entry, i) => (
                       <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    formatter={(v) => formatMoney(v)}
-                    contentStyle={{ borderRadius: 12, fontSize: 12 }}
-                  />
+                  <Tooltip {...chart.tooltip} formatter={(v) => formatMoney(v)} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="mt-3 space-y-2">
+              <ul className="mt-3 space-y-2">
                 {categoryBreakdown.map((c) => (
-                  <div
-                    key={c.name}
-                    className="flex items-center justify-between text-xs"
-                  >
-                    <span className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: c.color }}
-                      />
-                      {c.name}
+                  <li key={c.name} className="flex items-center justify-between text-body-sm">
+                    <span className="flex min-w-0 items-center gap-2 text-on-surface-variant">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
+                      <span className="wrap-any">{c.name}</span>
                     </span>
-                    <span className="font-semibold text-zinc-700 dark:text-zinc-200">
-                      {formatMoney(c.value)}
-                    </span>
-                  </div>
+                    <span className="font-medium tabular-nums text-on-surface">{formatMoney(c.value)}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </>
           )}
-        </div>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900 lg:col-span-2">
-          <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-            <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-              Giao dịch gần đây
-            </h3>
-            <Link
-              to="/transactions"
-              className="text-xs font-semibold text-accent-600 hover:underline"
-            >
-              Xem tất cả
+        <section className="overflow-hidden rounded-2xl bg-surface-container-low lg:col-span-2">
+          <div className="flex items-center justify-between px-5 pb-2 pt-5">
+            <h3 className="text-title-md text-on-surface">{t('dashboard.recent')}</h3>
+            <Link to="/transactions" className="state-layer rounded-full px-3 py-1.5 text-label-lg text-primary">
+              {t('dashboard.viewAll')}
             </Link>
           </div>
           {recent.length === 0 ? (
-            <EmptyState
-              icon="receipt_long"
-              text="Chưa có giao dịch nào."
-              action={{ label: "Thêm giao dịch", onClick: openAddTx }}
-            />
+            <EmptyState icon="receipt_long" text={t('dashboard.noTx')} action={{ label: t('tx.addTitle'), onClick: openAddTx }} />
           ) : (
-            <div className="divide-y divide-zinc-50 dark:divide-zinc-800">
-              {recent.map((t, idx) => {
-                const cat = getCategory(t.categoryId);
-                const wallet = getWallet(t.walletId);
+            <ul className="pb-2">
+              {recent.map((tx, idx) => {
+                const cat = getCategory(tx.categoryId);
+                const isTransfer = tx.type === 'transfer';
                 return (
-                  <div
-                    key={t.id}
-                    className="flex items-center gap-3 px-5 py-3 transition-colors duration-150 animate-slide-up hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40"
-                    style={{ animationDelay: `${idx * 40}ms` }}
-                  >
-                    <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                      style={{
-                        backgroundColor: `${cat?.color || "#94A3B8"}20`,
-                        color: cat?.color || "#94A3B8",
-                      }}
-                    >
-                      <Emoji size={20}>{getCategoryEmoji(cat)}</Emoji>
+                  <li key={tx.id} className="flex animate-slide-up items-center gap-3 px-5 py-3" style={{ animationDelay: `${idx * 40}ms` }}>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${cat?.color || '#94A3B8'}26` }}>
+                      {isTransfer ? <Icon name="sync_alt" className="text-on-surface-variant" /> : <Emoji size={20}>{getCategoryEmoji(cat)}</Emoji>}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">
-                        {cat?.name || "Khác"} {t.note ? `· ${t.note}` : ""}
+                      <p className="wrap-any text-title-sm text-on-surface">
+                        {isTransfer ? t('tx.transfer') : cat?.name || t('common.other')} {tx.note ? `· ${tx.note}` : ''}
                       </p>
-                      <p className="text-xs text-zinc-400">
-                        {formatDateShort(t.date)} · {formatTime(t.date)}
+                      <p className="text-body-sm text-on-surface-variant">
+                        {formatDateShort(tx.date)} · {formatTime(tx.date)}
                       </p>
                     </div>
-                    <span
-                      className={`shrink-0 text-sm font-bold tabular-nums ${t.type === "income" ? "text-emerald-600" : "text-rose-500"}`}
-                    >
-                      {t.type === "income" ? "+" : "-"}
-                      {formatMoney(t.amount)}
+                    <span className={`shrink-0 text-title-sm font-bold tabular-nums ${tx.type === 'income' ? 'text-income' : tx.type === 'expense' ? 'text-expense' : 'text-on-surface-variant'}`}>
+                      {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
+                      {formatMoney(tx.amount)}
                     </span>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
-        </div>
+        </section>
 
-        <div className="rounded-2xl border border-zinc-100 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <h3 className="mb-4 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-            Số dư theo ví
-          </h3>
-          <div className="space-y-3">
+        <Card title={t('dashboard.walletBalances')}>
+          <ul className="space-y-3">
             {wallets.map((w) => (
-              <div key={w.id} className="flex items-center gap-3">
-                <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: `${w.color}20`, color: w.color }}
-                >
-                  <Icon name={w.icon} size={18} />
+              <li key={w.id} className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${w.color}26`, color: w.color }}>
+                  <Icon name={w.icon} size={20} />
                 </span>
-                <span className="flex-1 truncate text-sm text-zinc-600 dark:text-zinc-300">
-                  {w.name}
-                </span>
-                <span className="text-sm font-semibold tabular-nums text-zinc-800 dark:text-zinc-100">
-                  {formatMoney(w.balance)}
-                </span>
-              </div>
+                <span className="flex-1 wrap-any text-body-md text-on-surface-variant">{w.name}</span>
+                <span className="text-title-sm font-bold tabular-nums text-on-surface">{formatMoney(w.balance)}</span>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </Card>
       </div>
-    </div>
-  );
-}
-
-function SummaryCard({ icon, label, value, iconBg, badge, valueClass = "" }) {
-  return (
-    <div className="rounded-2xl border border-zinc-100 bg-white p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-zinc-200/60 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:shadow-black/20">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <span
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-10 sm:w-10 ${iconBg}`}
-        >
-          <Icon name={icon} size={19} />
-        </span>
-        {badge}
-      </div>
-      <p className="text-xs font-medium text-zinc-400">{label}</p>
-      <p
-        className={`mt-1 truncate text-lg font-bold tabular-nums text-zinc-900 sm:text-xl dark:text-zinc-50 ${valueClass}`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-export function EmptyState({ icon, text, action }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-zinc-400 dark:bg-zinc-800">
-        <Icon name={icon} size={28} />
-      </span>
-      <p className="max-w-xs text-sm text-zinc-400">{text}</p>
-      {action && (
-        <button
-          onClick={action.onClick}
-          className="text-sm font-semibold text-accent-600 hover:underline"
-        >
-          {action.label}
-        </button>
-      )}
     </div>
   );
 }

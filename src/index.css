@@ -2,129 +2,354 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Material Design 3 colour roles (default seed #2196F3, exported from
+   Material Theme Builder (material-theme-blue.json)). Values are "r g b" triplets so Tailwind opacity
+   modifiers work. src/theme overrides them at runtime for custom seeds.
+   ========================================================================== */
 :root {
   --font-scale: 1;
+  /* Interaction state layers (Material 3: hover 8%, focus/press 10-12%). */
+  --state-hover: 0.08;
+  --state-focus: 0.1;
+  --state-press: 0.1;
+  --ripple-alpha: 0.16;
+  --md-primary: 54 97 142;
+  --md-on-primary: 255 255 255;
+  --md-primary-container: 209 228 255;
+  --md-on-primary-container: 25 73 117;
+  --md-secondary: 83 95 112;
+  --md-on-secondary: 255 255 255;
+  --md-secondary-container: 215 227 247;
+  --md-on-secondary-container: 59 72 88;
+  --md-tertiary: 107 87 120;
+  --md-on-tertiary: 255 255 255;
+  --md-tertiary-container: 242 218 255;
+  --md-on-tertiary-container: 82 63 95;
+  --md-error: 186 26 26;
+  --md-on-error: 255 255 255;
+  --md-error-container: 255 218 214;
+  --md-on-error-container: 147 0 10;
+  --md-background: 248 249 255;
+  --md-on-background: 25 28 32;
+  --md-surface: 248 249 255;
+  --md-on-surface: 25 28 32;
+  --md-surface-variant: 223 226 235;
+  --md-on-surface-variant: 67 71 78;
+  --md-outline: 115 119 127;
+  --md-outline-variant: 195 199 207;
+  --md-shadow: 0 0 0;
+  --md-scrim: 0 0 0;
+  --md-inverse-surface: 46 49 53;
+  --md-inverse-on-surface: 239 240 247;
+  --md-inverse-primary: 160 202 253;
+  --md-surface-tint: 54 97 142;
+  --md-surface-dim: 216 218 224;
+  --md-surface-bright: 248 249 255;
+  --md-surface-container-lowest: 255 255 255;
+  --md-surface-container-low: 242 243 250;
+  --md-surface-container: 236 238 244;
+  --md-surface-container-high: 230 232 238;
+  --md-surface-container-highest: 225 226 232;
+  --md-income: 0 109 56;
+  --md-on-income: 255 255 255;
+  --md-income-container: 141 249 172;
+  --md-on-income-container: 0 33 13;
+  --md-expense: 186 26 26;
+  --md-on-expense: 255 255 255;
+  --md-expense-container: 255 218 214;
+  --md-on-expense-container: 147 0 10;
+}
 
-  /* Green (default, Tailwind "green" palette) */
-  --accent-50: 240 253 244;
-  --accent-100: 220 252 231;
-  --accent-200: 187 247 208;
-  --accent-300: 134 239 172;
-  --accent-400: 74 222 128;
-  --accent-500: 34 197 94;
-  --accent-600: 22 163 74;
-  --accent-700: 21 128 61;
-  --accent-800: 22 101 52;
-  --accent-900: 20 83 45;
+html.dark {
+  /* Light-coloured overlays wash out light text on dark surfaces - keep them subtle. */
+  --state-hover: 0.05;
+  --state-focus: 0.08;
+  --state-press: 0.08;
+  --ripple-alpha: 0.12;
+  --md-primary: 160 202 253;
+  --md-on-primary: 0 50 88;
+  --md-primary-container: 25 73 117;
+  --md-on-primary-container: 209 228 255;
+  --md-secondary: 187 199 219;
+  --md-on-secondary: 37 49 64;
+  --md-secondary-container: 59 72 88;
+  --md-on-secondary-container: 215 227 247;
+  --md-tertiary: 214 190 228;
+  --md-on-tertiary: 59 41 72;
+  --md-tertiary-container: 82 63 95;
+  --md-on-tertiary-container: 242 218 255;
+  --md-error: 255 180 171;
+  --md-on-error: 105 0 5;
+  --md-error-container: 147 0 10;
+  --md-on-error-container: 255 218 214;
+  --md-background: 17 20 24;
+  --md-on-background: 225 226 232;
+  --md-surface: 17 20 24;
+  --md-on-surface: 225 226 232;
+  --md-surface-variant: 67 71 78;
+  --md-on-surface-variant: 195 199 207;
+  --md-outline: 141 145 153;
+  --md-outline-variant: 67 71 78;
+  --md-shadow: 0 0 0;
+  --md-scrim: 0 0 0;
+  --md-inverse-surface: 225 226 232;
+  --md-inverse-on-surface: 46 49 53;
+  --md-inverse-primary: 54 97 142;
+  --md-surface-tint: 160 202 253;
+  --md-surface-dim: 17 20 24;
+  --md-surface-bright: 54 57 62;
+  --md-surface-container-lowest: 11 14 19;
+  --md-surface-container-low: 25 28 32;
+  --md-surface-container: 29 32 36;
+  --md-surface-container-high: 39 42 47;
+  --md-surface-container-highest: 50 53 58;
+  --md-income: 113 220 146;
+  --md-on-income: 0 57 26;
+  --md-income-container: 0 82 41;
+  --md-on-income-container: 141 249 172;
+  --md-expense: 255 180 171;
+  --md-on-expense: 105 0 5;
+  --md-expense-container: 147 0 10;
+  --md-on-expense-container: 255 218 214;
 }
 
 html {
   font-size: calc(16px * var(--font-scale));
   -webkit-tap-highlight-color: transparent;
-  --toast-bg: 255 255 255;
-  --toast-fg: 15 23 42;
-  --toast-border: 226 232 240;
+  -webkit-text-size-adjust: 100%;
   color-scheme: light;
+  scroll-behavior: smooth;
 }
-
 html.dark {
-  --toast-bg: 64 64 64;
-  --toast-fg: 241 245 249;
-  --toast-border: 51 65 85;
   color-scheme: dark;
 }
 
 body {
-  @apply bg-zinc-50 text-zinc-900 antialiased;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    sans-serif;
+  @apply bg-surface font-sans text-body-md text-on-surface antialiased;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
 }
 
-.dark body {
-  @apply bg-zinc-950 text-zinc-100;
-}
-
+/* Thin themed scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(161 161 170 / 0.4) transparent;
+  scrollbar-color: rgb(var(--md-outline) / 0.45) transparent;
 }
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--md-outline) / 0.45); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--md-outline) / 0.7); }
+
+:focus-visible {
+  outline: 2px solid rgb(var(--md-primary));
+  outline-offset: 2px;
 }
-::-webkit-scrollbar-thumb {
-  background: rgb(161 161 170 / 0.4);
-  border-radius: 8px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgb(161 161 170 / 0.6);
+::selection {
+  background: rgb(var(--md-primary-container));
+  color: rgb(var(--md-on-primary-container));
 }
 
+@layer components {
+/* ---- State layers & ripple ------------------------------------------------ */
+.state-layer { position: relative; isolation: isolate; }
+.state-layer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms cubic-bezier(0.2, 0, 0, 1);
+  z-index: -1;
+}
+@media (hover: hover) {
+  .state-layer:hover:not(:disabled)::before { opacity: var(--state-hover); }
+}
+.state-layer:focus-visible::before { opacity: var(--state-focus); }
+.state-layer:active:not(:disabled)::before { opacity: var(--state-press); }
+
+.ripple { position: relative; overflow: hidden; }
+.ripple-wave {
+  position: absolute;
+  border-radius: 9999px;
+  background: currentColor;
+  pointer-events: none;
+  animation: ripple 500ms cubic-bezier(0.2, 0, 0, 1) forwards;
+  opacity: var(--ripple-alpha);
+}
+
+/* ---- Filled text field ---------------------------------------------------- */
+.md-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0 1rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: rgb(var(--md-surface-container-highest));
+  box-shadow: inset 0 -1px 0 0 rgb(var(--md-on-surface-variant));
+  transition: box-shadow 200ms cubic-bezier(0.2, 0, 0, 1), background-color 200ms;
+}
+.md-field:hover { background: rgb(var(--md-surface-container-high)); }
+.md-field:focus-within {
+  box-shadow: inset 0 -2px 0 0 rgb(var(--md-primary));
+}
+.md-field-error { box-shadow: inset 0 -2px 0 0 rgb(var(--md-error)); }
+.md-field-error:focus-within { box-shadow: inset 0 -2px 0 0 rgb(var(--md-error)); }
+.md-field-disabled { opacity: 0.6; pointer-events: none; }
+
+.md-input {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  padding: 1.5rem 0 0.375rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: rgb(var(--md-on-surface));
+  outline: none;
+  border: 0;
+}
+.md-input::placeholder { color: transparent; }
+.md-input:focus-visible { outline: none; }
+select.md-input { appearance: none; cursor: pointer; padding-right: 1.5rem; }
+textarea.md-input { resize: none; overflow: hidden; display: block; }
+
+.md-label {
+  position: absolute;
+  left: 0;
+  top: 1rem;
+  max-width: 100%;
+  white-space: nowrap;
+  transform-origin: left top;
+  pointer-events: none;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: rgb(var(--md-on-surface-variant));
+  transition: top 180ms cubic-bezier(0.2, 0, 0, 1), font-size 180ms cubic-bezier(0.2, 0, 0, 1),
+    line-height 180ms, color 180ms;
+}
+.md-input:focus ~ .md-label,
+.md-input:not(:placeholder-shown) ~ .md-label,
+.md-field-floated .md-label {
+  top: 0.4rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+.md-input:focus ~ .md-label,
+.md-field:focus-within .md-label { color: rgb(var(--md-primary)); }
+.md-field-error .md-label,
+.md-field-error:focus-within .md-label { color: rgb(var(--md-error)); }
+.md-field-floated .md-input { padding-top: 1.5rem; }
+
+input[type='date'].md-input,
+input[type='datetime-local'].md-input { min-height: 3.5rem; }
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  opacity: 0.65;
+  cursor: pointer;
+}
+html.dark input[type='date']::-webkit-calendar-picker-indicator,
+html.dark input[type='datetime-local']::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+.md-supporting {
+  margin: 0.25rem 1rem 0;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: rgb(var(--md-on-surface-variant));
+}
+.md-supporting-error { color: rgb(var(--md-error)); }
+}
+
+/* ---- Skeleton ------------------------------------------------------------- */
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: rgb(228 228 231);
-}
-.dark .skeleton {
-  background: rgb(39 39 42);
+  background: rgb(var(--md-surface-container-highest));
 }
 .skeleton::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgb(255 255 255 / 0.5),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgb(var(--md-surface) / 0.55), transparent);
   background-size: 400px 100%;
   animation: shimmer 1.6s infinite linear;
 }
-.dark .skeleton::after {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgb(255 255 255 / 0.08),
-    transparent
-  );
+
+/* ---- Misc ----------------------------------------------------------------- */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type='number'] { -moz-appearance: textfield; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Single loading screen used by index.html AND every top-level Suspense / auth gate,
+   so the user sees one continuous splash instead of several different spinners. */
+.splash {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  background: rgb(var(--md-surface));
+  color: rgb(var(--md-primary));
+}
+.splash-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  border: 3px solid rgb(var(--md-primary-container));
+  border-top-color: rgb(var(--md-primary));
+  animation: spin 0.8s linear infinite;
+}
+.splash-name { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; }
+/* Small in-page spinner that only appears if loading takes longer than ~200 ms */
+.delayed-spinner { opacity: 0; animation: reveal 200ms 200ms cubic-bezier(0.2, 0, 0, 1) forwards; }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* Keyframes used from plain CSS must be declared here: Tailwind only emits the
+   ones referenced by an animate-* utility class. */
+@keyframes ripple {
+  from { transform: scale(0); opacity: var(--ripple-alpha); }
+  to { transform: scale(1); opacity: 0; }
+}
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
+}
+@keyframes reveal { to { opacity: 1; } }
+
+/* Long text wraps instead of being cut off with an ellipsis */
+.wrap-any { overflow-wrap: anywhere; }
+
+/* Floating action buttons: one column pinned bottom-right, above the mobile nav bar */
+.fab-stack {
+  position: fixed;
+  z-index: 40;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(5.75rem + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+.fab-stack > * { pointer-events: auto; }
+.fab-slot { display: contents; }
+@media (min-width: 1024px) {
+  .fab-stack { right: 2rem; bottom: 2rem; }
 }
 
-:focus-visible {
-  outline: 2px solid rgb(var(--accent-500));
-  outline-offset: 2px;
-  border-radius: 4px;
-}
+/* Skip rendering work for long off-screen lists */
+.cv-auto { content-visibility: auto; contain-intrinsic-size: auto 72px; }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
-}
-
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type="number"] {
-  -moz-appearance: textfield;
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }

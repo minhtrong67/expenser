@@ -19,7 +19,11 @@ export function useLocalStorage(key, initialValue) {
   }, [key, value]);
 
   const remove = useCallback(() => {
-    window.localStorage.removeItem(key);
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      /* ignore */
+    }
     setValue(initialValue);
   }, [key, initialValue]);
 

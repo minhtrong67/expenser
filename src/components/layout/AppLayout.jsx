@@ -1,76 +1,78 @@
-import { Suspense, useCallback, useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
-import Sidebar from "./Sidebar";
-import MobileNav from "./MobileNav";
-import Topbar from "./Topbar";
-import CommandPalette from "./CommandPalette";
-import TransactionFormModal from "../TransactionFormModal";
-import ScrollToTop from "../ui/ScrollToTop";
-import RouteFallback from "../ui/RouteFallback";
-import { NAV_ITEMS } from "./navConfig";
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import MobileNav from './MobileNav';
+import Topbar from './Topbar';
+import CommandPalette from './CommandPalette';
+import TransactionFormModal from '../TransactionFormModal';
+import FabStack from './FabStack';
+import RouteFallback from '../ui/RouteFallback';
+import { NAV_ITEMS } from './navConfig';
+import { useT } from '../../i18n';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function AppLayout() {
+  const t = useT();
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [txModalOpen, setTxModalOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(
-    () => typeof window !== "undefined" && window.innerWidth >= 1024,
-  );
+  const [scrolled, setScrolled] = useState(false);
+  const [fabSlot, setFabSlot] = useState(null); // DOM node pages portal their FAB into
+  const sentinelRef = useRef(null);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
 
   useEffect(() => {
     function onKey(e) {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPaletteOpen(true);
       }
     }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  // Auto-close the drawer when navigating on small/medium screens
+  // Tint the top bar once content scrolls under it (observer: no scroll handler cost).
   useEffect(() => {
-    if (window.innerWidth < 1024) setSidebarOpen(false);
+    const el = sentinelRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // Start each page at the top (the drawer closes itself from its nav links).
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [location.pathname]);
 
   const openAddTx = useCallback(() => setTxModalOpen(true), []);
 
-  const current = NAV_ITEMS.find((n) =>
-    n.end ? location.pathname === n.to : location.pathname.startsWith(n.to),
-  );
+  const current = NAV_ITEMS.find((n) => (n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)));
+  const title = current ? t(current.labelKey) : 'Expenser';
+  usePageTitle(`${title} · Expenser`);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-neutral-950">
-      <Sidebar
-        onAddClick={openAddTx}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-      <div
-        className={`flex min-h-screen flex-col transition-[padding] duration-200 ${sidebarOpen ? "lg:pl-64" : "lg:pl-0"}`}
-      >
-        <Topbar
-          title={current?.label || "Expenser"}
-          onSearchClick={() => setPaletteOpen(true)}
-          onMenuClick={() => setSidebarOpen((o) => !o)}
-        />
-        <main className="flex-1 px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-10">
+    <div className="min-h-dvh bg-surface">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-on-primary">
+        {t('common.skipToContent')}
+      </a>
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className={`flex min-h-dvh flex-col transition-[padding] duration-300 ease-emphasized ${sidebarOpen ? 'lg:pl-[19rem]' : 'lg:pl-0'}`}>
+        <div ref={sentinelRef} className="absolute top-0 h-px w-px" aria-hidden="true" />
+        <Topbar title={title} scrolled={scrolled} onSearchClick={() => setPaletteOpen(true)} onMenuClick={() => setSidebarOpen((o) => !o)} />
+        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-36 pt-2 sm:px-6 sm:pt-4 lg:px-8 lg:pb-28">
           <Suspense fallback={<RouteFallback />}>
-            <Outlet context={{ openAddTx }} />
+            <div key={location.pathname} className="animate-fade-through">
+              <Outlet context={{ openAddTx, fabSlot }} />
+            </div>
           </Suspense>
         </main>
       </div>
-      <MobileNav onAddClick={openAddTx} />
-      <ScrollToTop />
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        onAddTransaction={openAddTx}
-      />
-      <TransactionFormModal
-        open={txModalOpen}
-        onClose={() => setTxModalOpen(false)}
-      />
+      <MobileNav />
+      <FabStack onSlot={setFabSlot} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onAddTransaction={openAddTx} />
+      <TransactionFormModal open={txModalOpen} onClose={() => setTxModalOpen(false)} />
     </div>
   );
 }

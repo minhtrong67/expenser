@@ -1,62 +1,88 @@
-# Expenser — Quản Lý Chi Tiêu Cá Nhân
+<div align="center">
 
-Ứng dụng web quản lý chi tiêu cá nhân, xây dựng bằng **ReactJS + Vite + TailwindCSS + Firebase**, tối ưu cho **di động** và cài đặt được như một ứng dụng thật (PWA). Giao diện tối giản, font hệ thống (system-ui), icon từ **lucide-react** (không phụ thuộc font ngoài), tông màu **xanh lá (green)** duy nhất, hoàn toàn bằng tiếng Việt.
+# Expenser
 
-## ✨ Tính năng chính
+**Ứng dụng quản lý chi tiêu cá nhân — gọn gàng, đẹp mắt, mã nguồn mở.**
+*A free, open-source personal expense tracker with a Material Design 3 interface.*
 
-- **Xác thực người dùng**: Đăng ký / Đăng nhập bằng Email-Mật khẩu hoặc Google (Firebase Authentication)
-- **Dashboard tổng quan**: số dư, thu/chi tháng này, biểu đồ thu chi theo ngày, phân bổ chi tiêu theo danh mục, giao dịch gần đây, số dư theo ví
-- **Giao dịch** — 2 chế độ xem trong cùng một trang:
-  - **Danh sách**: nhóm giao dịch theo từng ngày (ví dụ "Thứ 3, 22/09/2026"), hiển thị dạng card, có bộ lọc, sắp xếp, chọn nhiều để xóa hàng loạt
-  - **Lịch**: xem tổng thu/chi theo từng ngày trên lịch tháng, chạm vào một ngày để xem chi tiết
-- **Thêm giao dịch nhanh**: một trường ngày-giờ duy nhất (mặc định là thời điểm hiện tại), ghi chú dùng ô nhập tự mở rộng theo nội dung
-- **Gợi ý nhập nhanh**: khi thêm giao dịch mới, ứng dụng gợi ý các mục đã nhập gần đây — chạm để điền nhanh số tiền, danh mục và ví (ngày giờ luôn lấy thời điểm hiện tại)
-- **Quản lý danh mục thu & chi**: CRUD với **emoji tự chọn** (chọn từ bộ gợi ý theo nhóm hoặc gõ/dán bất kỳ emoji nào) và màu sắc tùy chỉnh
-- **Quản lý ví / tài khoản**: nhiều ví, xem số dư, **chuyển tiền giữa các ví**
-- **Thống kê**: nổi bật tổng số giao dịch, tổng thu, tổng chi và chênh lệch theo khoảng thời gian (Hôm nay / Tuần / Tháng / Năm / Tất cả), kèm biểu đồ đường, cột, tròn (Recharts) và xuất báo cáo PDF/Excel/CSV cho khoảng thời gian đang xem
-- **Cài đặt**: giao diện Sáng/Tối/Hệ thống, cỡ chữ, xuất/nhập toàn bộ dữ liệu giao dịch, khôi phục cài đặt mặc định, cài đặt PWA
-- **Xuất dữ liệu**: CSV, Excel (.xlsx) hoặc JSON
-- **Nhập dữ liệu**: từ file CSV, Excel (.xlsx) hoặc JSON — tự nhận diện định dạng theo phần mở rộng file
-- **Xuất báo cáo thống kê**: file PDF định dạng đẹp, có font tiếng Việt nhúng sẵn (không lỗi font/dấu)
-- **Tìm kiếm nhanh (Ctrl + K)**: điều hướng và thao tác nhanh trong toàn bộ ứng dụng
-- **PWA, ưu tiên di động**: cài lên màn hình chính điện thoại, dùng được khi mất mạng, thanh điều hướng dưới (Tổng quan / Giao dịch / Thống kê / Cài đặt) + nút thêm nhanh (FAB) được thiết kế riêng cho thao tác một tay
-- Toàn bộ tùy chỉnh giao diện được **lưu vào localStorage**
-- Kiểm tra dữ liệu nhập chặt chẽ: `trim()` khoảng trắng, chặn số âm/0, chặn ngày tương lai, chặn trùng tên danh mục/ví...
+[![Live demo](https://img.shields.io/badge/Live%20demo-expenser--quan--ly--chi--tieu.vercel.app-36618E?style=for-the-badge&logo=vercel&logoColor=white)](https://expenser-quan-ly-chi-tieu.vercel.app/)
 
-## 🛠️ Công nghệ sử dụng
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-FFCA28?logo=firebase&logoColor=black)
+![Material Design 3](https://img.shields.io/badge/Material%20Design-3-757575?logo=materialdesign&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?logo=pwa&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-| Thành phần         | Công nghệ                                               |
-| ------------------ | ------------------------------------------------------- |
-| Frontend           | React 19, Vite, React Router 7                          |
-| Styling & Icon     | TailwindCSS 3, font hệ thống (system-ui), lucide-react  |
-| Backend / Database | Firebase Authentication + Cloud Firestore               |
-| Biểu đồ            | Recharts                                                |
-| Nhập/Xuất dữ liệu  | PapaParse (CSV), SheetJS (Excel), JSON, jsPDF (báo cáo) |
-| PWA                | vite-plugin-pwa (Workbox)                               |
-| Thông báo          | react-hot-toast                                         |
+[**Dùng thử**](https://expenser-quan-ly-chi-tieu.vercel.app/) · [**Trang giới thiệu**](https://expenser-quan-ly-chi-tieu.vercel.app/landing.html)
 
-## 🚀 Hướng dẫn cài đặt
+</div>
 
-### 1. Cài dependencies
+---
+
+## 📖 Giới thiệu
+
+**Expenser** giúp bạn ghi lại thu chi trong vài giây, theo dõi nhiều ví, xem thống kê trực quan và xuất báo cáo chuyên nghiệp (PDF / Excel / ảnh). Ứng dụng được thiết kế theo **Material Design 3**, ưu tiên thao tác một tay trên điện thoại, cài được như ứng dụng thật (PWA) và vẫn dùng được khi mất mạng.
+
+- 🎨 **Material Design 3** — bảng màu sáng/tối tạo từ file theme của Material Theme Builder, **đổi được màu chủ đề** ngay trong Cài đặt.
+- 🌐 **Song ngữ Tiếng Việt / English** — chuyển ngôn ngữ tức thì, ngày giờ và tiền tệ tự định dạng theo ngôn ngữ.
+- ⚡ **Nhanh & nhẹ** — tách code theo trang, tải thư viện nặng (biểu đồ, xuất file) khi cần, Firestore có bộ nhớ đệm offline.
+- 🔓 **Mã nguồn mở** theo giấy phép MIT.
+
+## 🖼️ Screenshots
+
+> Ảnh đặt trong thư mục [`screenshots/`](screenshots) với tên `image01.png`, `image02.png`, `image03.png`, …
+
+| | | |
+| :---: | :---: | :---: |
+| ![Tổng quan](screenshots/image01.png)<br/>**Tổng quan** | ![Giao dịch](screenshots/image02.png)<br/>**Danh sách giao dịch** | ![Thêm giao dịch](screenshots/image03.png)<br/>**Thêm giao dịch** |
+| ![Thống kê](screenshots/image04.png)<br/>**Thống kê** | ![Báo cáo](screenshots/image05.png)<br/>**Báo cáo PDF có biểu đồ tròn** | ![Màu chủ đề](screenshots/image06.png)<br/>**Đổi màu chủ đề** |
+| ![Chế độ tối](screenshots/image07.png)<br/>**Chế độ tối** | ![Di động](screenshots/image08.png)<br/>**Giao diện di động** | ![English](screenshots/image09.png)<br/>**Tiếng Anh** |
+
+## ✨ Tính năng
+
+**Quản lý tài chính**
+- **Tổng quan**: số dư, thu/chi tháng này (so với tháng trước), biểu đồ tròn thu/chi tháng này, cơ cấu chi tiêu, giao dịch gần đây, số dư từng ví.
+- **Giao dịch**: xem dạng **danh sách** (nhóm theo ngày) hoặc **lịch tháng**; bộ lọc dạng accordion (có nút **Đặt lại bộ lọc**), tìm kiếm, sắp xếp; vuốt phải để sửa / vuốt trái để xóa (trên máy tính có nút sửa/xóa khi rê chuột); tải thêm tự động khi cuộn.
+- **Nhập nhanh**: gợi ý các mục đã nhập gần đây — chạm để điền sẵn số tiền, danh mục và ví.
+- **Danh mục thu & chi**: thêm/sửa/xóa với emoji tự chọn và màu tùy chỉnh.
+- **Nhiều ví**: số dư từng ví và **chuyển tiền giữa các ví**.
+
+**Thống kê & báo cáo**
+- Lọc theo **Hôm nay / Tuần này / Tháng này / Năm nay / Tất cả**, kèm điều hướng sang kỳ trước/sau (ngày, tuần, tháng, năm).
+- Biểu đồ xu hướng, so sánh thu–chi, **biểu đồ tròn** theo danh mục.
+- **Xuất báo cáo PDF / Excel / ảnh PNG**, đều có **biểu đồ tròn** (chi tiêu và thu nhập theo danh mục).
+- Nhập / xuất **giao dịch** và **danh mục** riêng biệt (CSV, Excel .xlsx, JSON) và nút **Xuất tất cả** (1 file Excel + 1 file JSON gồm cả hai, cùng 2 file CSV). Nhập hàng loạt rất nhanh nhờ ghi theo lô.
+
+**Trải nghiệm**
+- Nút nổi (FAB) chỉ xuất hiện ở trang **Giao dịch** (thêm giao dịch) và **Danh mục** (thêm danh mục), xếp cùng cột với nút **Lên đầu trang** nên không chồng nhau.
+- Form nhiều trường (giao dịch, danh mục) mở dạng **sheet toàn màn hình**; form ít trường và hộp xác nhận dùng **dialog** ở giữa; không tự focus vào ô nhập.
+- Trang Cài đặt chia thành các mục **accordion** đóng/mở (nhớ trạng thái trong phiên).
+- Chế độ **Sáng / Tối / Theo hệ thống**, **màu chủ đề tùy chọn** (8 màu gợi ý + chọn màu bất kỳ), cỡ chữ 3 mức.
+- **Bộ lọc từng trang được ghi nhớ** (sessionStorage) khi chuyển trang.
+- Tìm kiếm nhanh **Ctrl + K**, hoạt ảnh mượt (ripple, chuyển trang, trượt), hỗ trợ `prefers-reduced-motion`.
+- **PWA**: cài lên màn hình chính, dùng offline, đồng bộ lại khi có mạng.
+- Truy cập tốt: nhãn ARIA, điều hướng bàn phím, bẫy focus trong hộp thoại.
+
+## 🚀 Cài đặt
+
+**Yêu cầu:** Node.js ≥ 18 và một dự án [Firebase](https://console.firebase.google.com/).
 
 ```bash
+git clone <repo-url>
+cd expenser
 npm install
 ```
 
-### 2. Tạo Firebase Project
+**1. Tạo Firebase project**
 
-1. Truy cập [Firebase Console](https://console.firebase.google.com/) → **Add project**
-2. Vào **Authentication** → **Sign-in method** → bật **Email/Password** và **Google**
-3. Vào **Firestore Database** → **Create database** (chế độ Production hoặc Test)
-4. Vào **Project Settings** → **Your apps** → **Web app** → copy cấu hình `firebaseConfig`
+1. Firebase Console → **Add project**.
+2. **Authentication** → *Sign-in method* → bật **Google** (và Email/Password nếu muốn dùng trang `/register`).
+3. **Firestore Database** → **Create database**.
+4. **Project settings → Your apps → Web app** → sao chép `firebaseConfig`.
 
-### 3. Cấu hình biến môi trường
-
-Sao chép `.env.example` thành `.env` và điền thông tin Firebase:
-
-```bash
-cp .env.example .env
-```
+**2. Biến môi trường** — sao chép `.env.example` thành `.env` rồi điền:
 
 ```env
 VITE_FIREBASE_API_KEY=xxxxx
@@ -67,94 +93,98 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=xxxxx
 VITE_FIREBASE_APP_ID=xxxxx
 ```
 
-### 4. Thiết lập Firestore Security Rules
+**3. Firestore Security Rules** — dán nội dung file [`firestore.rules`](firestore.rules) vào tab **Rules** (mỗi người dùng chỉ đọc/ghi dữ liệu của chính mình).
 
-Copy nội dung file `firestore.rules` (đã có sẵn trong dự án) vào tab **Rules** của Firestore trên Firebase Console, đảm bảo mỗi người dùng chỉ đọc/ghi được dữ liệu của chính mình:
+**4. Thêm tên miền vào Firebase Auth** — *Authentication → Settings → Authorized domains*: thêm `localhost` và tên miền triển khai (ví dụ `expenser-quan-ly-chi-tieu.vercel.app`).
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      match /{collection}/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-  }
-}
-```
+## 🧰 Công nghệ
 
-### 5. Chạy dự án ở môi trường phát triển
+| Thành phần | Công nghệ |
+| --- | --- |
+| Frontend | React 19, Vite 8, React Router 7 |
+| Giao diện | Tailwind CSS 3 + **Material Design 3** (design tokens), font hệ thống (system-ui), lucide-react |
+| Màu chủ đề | [`@material/material-color-utilities`](https://github.com/material-foundation/material-color-utilities) (tải khi cần) |
+| Backend | Firebase Authentication + Cloud Firestore (persistent cache) |
+| Biểu đồ | Recharts |
+| Xuất / nhập | jsPDF + autoTable, ExcelJS, PapaParse, html2canvas |
+| PWA | vite-plugin-pwa (Workbox) |
+| Công cụ | oxlint, script kiểm tra i18n |
 
-```bash
-npm run dev
-```
-
-Mở trình duyệt tại `http://localhost:5173`. Để xem đúng trải nghiệm ưu tiên cho di động, hãy mở DevTools → chế độ giả lập thiết bị (Ctrl/Cmd + Shift + M), hoặc mở trực tiếp bằng điện thoại trong cùng mạng LAN (`npm run dev -- --host`).
-
-### 6. Build bản phát hành (production)
+## 🛠️ Development
 
 ```bash
-npm run build
+npm run dev          # chạy dev server tại http://localhost:5173
+npm run dev -- --host   # mở trên điện thoại cùng mạng LAN
+npm run lint         # kiểm tra code (oxlint)
+npm run i18n:check   # kiểm tra mọi key dịch có đủ ở vi.js và en.js
+```
+
+**Thêm / sửa văn bản:** mọi chuỗi hiển thị nằm trong [`src/i18n/vi.js`](src/i18n/vi.js) và [`src/i18n/en.js`](src/i18n/en.js). Dùng `const t = useT()` rồi `t('khóa.chuỗi', { n: 3 })`. Trong tiếng Anh, khóa kết thúc `_one` là dạng số ít khi `n === 1`.
+
+**Đổi bảng màu mặc định:** bản xuất hiện tại nằm ở [`design/material-theme-blue.json`](design/material-theme-blue.json) (seed `#2196F3`). Để đổi, thay `src/theme/defaultScheme.js` và khối biến `--md-*` đầu file `src/index.css` bằng bản xuất mới từ [Material Theme Builder](https://material-foundation.github.io/material-theme-builder/).
+
+## 📦 Build
+
+```bash
+npm run build     # tạo thư mục dist/
 npm run preview   # xem thử bản build
 ```
 
-Thư mục `dist/` sau khi build có thể deploy lên Firebase Hosting, Vercel, Netlify, v.v.
+Triển khai lên **Vercel** (đã có sẵn `vercel.json`: SPA rewrite + cache header) hoặc Firebase Hosting / Netlify. Trang giới thiệu tĩnh nằm ở `public/landing.html` → `/landing.html`.
 
-```bash
-# Ví dụ deploy bằng Firebase Hosting
-npm install -g firebase-tools
-firebase login
-firebase init hosting   # chọn thư mục "dist" làm public directory, cấu hình SPA rewrite
-firebase deploy
-```
-
-## 📂 Cấu trúc thư mục
+## 📂 Cấu trúc project
 
 ```
-src/
-├── components/
-│   ├── layout/           # Sidebar, MobileNav, Topbar, CommandPalette, AppLayout
-│   ├── CalendarView.jsx  # Chế độ xem lịch, nhúng trong trang Giao dịch
-│   └── ui/                # Button, Modal, Icon, Emoji, EmojiPicker, MoneyInput,
-│                          # Textarea, ChoiceSelect, Skeleton...
-├── contexts/              # AuthContext, SettingsContext, DataContext (Firestore)
-├── hooks/                 # useLocalStorage, usePwaInstall, useRecentEntries
-├── pages/                 # Dashboard, Transactions (Danh sách/Lịch), Categories,
-│                          # Wallets, Statistics, Settings, Login, Register...
-├── routes/                # ProtectedRoute, PublicRoute
-├── utils/                 # format.js, validators.js, exportImport.js, defaults.js,
-│                          # categoryEmoji.js, iconMap.js (Material-icon-name → lucide)
-├── App.jsx
-├── firebase.js
-└── main.jsx
+expenser/
+├── public/
+│   ├── landing.html         # Trang giới thiệu (1 file HTML, Material Design)
+│   ├── og-image.png         # Ảnh chia sẻ mạng xã hội (1200×630)
+│   ├── icons/ · favicon.*   # Icon PWA & favicon (xanh lá Material)
+│   └── robots.txt · sitemap.xml
+├── screenshots/             # Ảnh minh họa cho README (image01.png, image02.png, …)
+├── scripts/check-i18n.mjs   # Kiểm tra đồng bộ từ điển vi/en
+├── src/
+│   ├── components/
+│   │   ├── layout/          # AppLayout, Sidebar, Topbar, MobileNav, CommandPalette
+│   │   ├── ui/              # Button, Modal, TextInput, Chip, SwipeableItem, AuthorCredit…
+│   │   └── *.jsx            # Form giao dịch / danh mục / ví, bộ lọc, lịch
+│   ├── contexts/            # Auth, Settings (giao diện + ngôn ngữ), Data (Firestore)
+│   ├── hooks/               # useSessionState, useLocalStorage, usePwaInstall, …
+│   ├── i18n/                # vi.js, en.js, hook useT
+│   ├── pages/               # Dashboard, Transactions, Categories, Wallets, Statistics, Settings, Login…
+│   ├── routes/              # ProtectedRoute, PublicRoute, ProtectedShell
+│   ├── theme/               # Bảng màu Material 3 mặc định + bộ tạo màu theo seed
+│   ├── utils/               # format, validators, exportImport, pieChart, ripple…
+│   ├── firebase.js          # Firebase Auth
+│   ├── firestore.js         # Firestore (tải sau khi đăng nhập)
+│   └── main.jsx · App.jsx · index.css
+├── firestore.rules · vercel.json · vite.config.js · tailwind.config.js
+└── LICENSE
 ```
 
-## 🗂️ Cấu trúc dữ liệu Firestore
+**Cấu trúc dữ liệu Firestore**
 
 ```
 users/{uid}
-  ├── transactions/{id}   { type, amount, categoryId, walletId, date, note }
-  ├── categories/{id}     { name, type, emoji, color }
-  └── wallets/{id}        { name, icon, color, balance }
+  ├── transactions/{id}  { type, amount, categoryId, walletId, date, note }
+  ├── categories/{id}    { name, type, emoji, color }
+  └── wallets/{id}       { name, icon, color, balance }
 ```
 
-Khi người dùng đăng ký/đăng nhập lần đầu, hệ thống sẽ tự động tạo sẵn một số danh mục (kèm emoji) và ví mặc định. Danh mục cũ (tạo trước khi có tính năng emoji) vẫn hiển thị bình thường nhờ cơ chế ánh xạ dự phòng trong `utils/categoryEmoji.js`.
+## 📄 License
 
-## ⌨️ Phím tắt
-
-- `Ctrl/Cmd + K`: Mở tìm kiếm nhanh / bảng lệnh
-- `Esc`: Đóng modal / bảng tìm kiếm
-
-## 📌 Ghi chú
-
-- File nhập/xuất dữ liệu (CSV/Excel/JSON) dùng các cột: `Ngày, Loại, Danh mục, Ví, Số tiền, Ghi chú` (Loại là "Thu" hoặc "Chi"). File JSON là một mảng các object cùng cấu trúc cột trên.
-- Emoji danh mục có thể chọn từ bộ gợi ý sẵn hoặc gõ/dán bất kỳ emoji nào (trên điện thoại: chạm giữ bàn phím → chọn biểu tượng cảm xúc 😀).
-- Gợi ý nhập nhanh được lưu theo từng thiết bị/trình duyệt (localStorage), không đồng bộ giữa các thiết bị, và chỉ điền nhanh số tiền/danh mục/ví — ngày giờ luôn lấy thời điểm hiện tại.
-- Ứng dụng chỉ hỗ trợ ngôn ngữ tiếng Việt, đơn vị tiền tệ VNĐ và một màu chủ đề duy nhất (xanh lá).
-- Cỡ chữ và chế độ sáng/tối được lưu trong `localStorage` của trình duyệt, không đồng bộ giữa các thiết bị.
+Dự án công khai và là **mã nguồn mở**, phát hành theo giấy phép **[MIT](LICENSE)** — bạn có thể tự do sử dụng, sao chép, chỉnh sửa và phân phối, kể cả cho mục đích thương mại, miễn là giữ lại thông báo bản quyền.
 
 ---
 
-Được phát triển bởi **minhtrong67** với sự hỗ trợ của **Claude (Anthropic)**.
+<div align="center">
+
+### 💙 Tác giả
+
+**`minhtrong67`** &nbsp;×&nbsp; **✨ Claude** *(AI by Anthropic)*
+
+Phát triển bởi **minhtrong67** với sự hỗ trợ của AI **Claude**.
+
+⭐ Nếu thấy hữu ích, hãy tặng dự án một ngôi sao nhé!
+
+</div>

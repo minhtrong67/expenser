@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -11,38 +11,52 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../firebase';
+import { auth, googleProvider } from '../firebase';
+import { useT } from '../i18n';
 
 const AuthContext = createContext(null);
 
-function mapAuthError(code) {
-  const map = {
-    'auth/email-already-in-use': 'Email này đã được sử dụng.',
-    'auth/invalid-email': 'Email không hợp lệ.',
-    'auth/user-not-found': 'Không tìm thấy tài khoản với email này.',
-    'auth/wrong-password': 'Mật khẩu không chính xác.',
-    'auth/invalid-credential': 'Email hoặc mật khẩu không chính xác.',
-    'auth/weak-password': 'Mật khẩu quá yếu (tối thiểu 6 ký tự).',
-    'auth/too-many-requests': 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.',
-    'auth/popup-closed-by-user': 'Cửa sổ đăng nhập Google đã bị đóng.',
-    'auth/network-request-failed': 'Lỗi kết nối mạng. Vui lòng kiểm tra lại.',
-  };
-  return map[code] || 'Đã có lỗi xảy ra. Vui lòng thử lại.';
-}
+const AUTH_ERRORS = {
+  'auth/email-already-in-use': 'auth.error.emailInUse',
+  'auth/invalid-email': 'auth.error.invalidEmail',
+  'auth/user-not-found': 'auth.error.userNotFound',
+  'auth/wrong-password': 'auth.error.wrongPassword',
+  'auth/invalid-credential': 'auth.error.invalidCredential',
+  'auth/weak-password': 'auth.error.weakPassword',
+  'auth/too-many-requests': 'auth.error.tooManyRequests',
+  'auth/popup-closed-by-user': 'auth.error.popupClosed',
+  'auth/network-request-failed': 'auth.error.network',
+};
 
 export function AuthProvider({ children }) {
+  const t = useT();
   const [user, setUser] = useState(undefined); // undefined = loading, null = logged out
   const [authError, setAuthError] = useState(null);
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
-    return unsub;
-  }, []);
+  useEffect(
+    () =>
+      onAuthStateChanged(auth, (u) => {
+        try {
+          if (u) localStorage.setItem('qlct:session', '1');
+          else localStorage.removeItem('qlct:session');
+        } catch {
+          /* storage unavailable */
+        }
+        setUser(u);
+      }),
+    [],
+  );
 
-  async function ensureUserDoc(u) {
+  const mapError = useCallback((code) => t(AUTH_ERRORS[code] || 'auth.error.generic'), [t]);
+
+  // Firestore is loaded lazily - the login screen doesn't need it.
+  const ensureUserDoc = useCallback(async (u) => {
     if (!u) return;
     try {
+      const [{ doc, setDoc, serverTimestamp }, { db }] = await Promise.all([
+        import('firebase/firestore'),
+        import('../firestore'),
+      ]);
       await setDoc(
         doc(db, 'users', u.uid),
         {
@@ -51,85 +65,80 @@ export function AuthProvider({ children }) {
           photoURL: u.photoURL || '',
           updatedAt: serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
     } catch {
-      /* ignore - profile doc is best-effort */
+      /* profile doc is best-effort */
     }
-  }
+  }, []);
 
-  async function register(name, email, password) {
-    setAuthError(null);
-    try {
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      if (name?.trim()) {
-        await updateProfile(cred.user, { displayName: name.trim() });
+  const wrap = useCallback(
+    async (fn) => {
+      setAuthError(null);
+      try {
+        return { success: true, user: await fn() };
+      } catch (err) {
+        const msg = mapError(err.code);
+        setAuthError(msg);
+        return { success: false, error: msg };
       }
-      await ensureUserDoc({ ...cred.user, displayName: name?.trim() });
-      return { success: true, user: cred.user };
-    } catch (err) {
-      const msg = mapAuthError(err.code);
-      setAuthError(msg);
-      return { success: false, error: msg };
-    }
-  }
+    },
+    [mapError],
+  );
 
-  async function login(email, password) {
-    setAuthError(null);
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-      return { success: true, user: cred.user };
-    } catch (err) {
-      const msg = mapAuthError(err.code);
-      setAuthError(msg);
-      return { success: false, error: msg };
-    }
-  }
+  const register = useCallback(
+    (name, email, password) =>
+      wrap(async () => {
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        if (name?.trim()) await updateProfile(cred.user, { displayName: name.trim() });
+        await ensureUserDoc({ ...cred.user, displayName: name?.trim() });
+        return cred.user;
+      }),
+    [wrap, ensureUserDoc],
+  );
 
-  async function loginWithGoogle() {
-    setAuthError(null);
-    try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      await ensureUserDoc(cred.user);
-      return { success: true, user: cred.user };
-    } catch (err) {
-      const msg = mapAuthError(err.code);
-      setAuthError(msg);
-      return { success: false, error: msg };
-    }
-  }
+  const login = useCallback(
+    (email, password) => wrap(async () => (await signInWithEmailAndPassword(auth, email.trim(), password)).user),
+    [wrap],
+  );
 
-  async function logout() {
-    await signOut(auth);
-  }
+  const loginWithGoogle = useCallback(
+    () =>
+      wrap(async () => {
+        const cred = await signInWithPopup(auth, googleProvider);
+        await ensureUserDoc(cred.user);
+        return cred.user;
+      }),
+    [wrap, ensureUserDoc],
+  );
 
-  async function resetPassword(email) {
-    try {
-      await sendPasswordResetEmail(auth, email.trim());
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: mapAuthError(err.code) };
-    }
-  }
+  const logout = useCallback(() => signOut(auth), []);
 
-  async function changePassword(currentPassword, newPassword) {
-    try {
-      const cred = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, cred);
-      await updatePassword(auth.currentUser, newPassword);
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: mapAuthError(err.code) };
-    }
-  }
+  const resetPassword = useCallback(
+    async (email) => {
+      try {
+        await sendPasswordResetEmail(auth, email.trim());
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: mapError(err.code) };
+      }
+    },
+    [mapError],
+  );
 
-  async function updateDisplayName(name) {
-    if (!auth.currentUser) return { success: false };
-    await updateProfile(auth.currentUser, { displayName: name.trim() });
-    await ensureUserDoc(auth.currentUser);
-    setUser({ ...auth.currentUser });
-    return { success: true };
-  }
+  const changePassword = useCallback(
+    async (currentPassword, newPassword) => {
+      try {
+        const cred = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+        await reauthenticateWithCredential(auth.currentUser, cred);
+        await updatePassword(auth.currentUser, newPassword);
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: mapError(err.code) };
+      }
+    },
+    [mapError],
+  );
 
   const value = useMemo(
     () => ({
@@ -142,14 +151,14 @@ export function AuthProvider({ children }) {
       logout,
       resetPassword,
       changePassword,
-      updateDisplayName,
     }),
-    [user, authError]
+    [user, authError, register, login, loginWithGoogle, logout, resetPassword, changePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
