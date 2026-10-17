@@ -96,8 +96,11 @@ export function SettingsProvider({ children }) {
     const root = document.documentElement;
     root.classList.toggle('dark', isDark);
     applyRoles(colors, root);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', colors.surface);
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+      meta.removeAttribute('media'); // the in-app theme wins over the OS one
+      meta.setAttribute('content', colors.surface);
+    });
+    root.style.backgroundColor = colors.surface;
   }, [isDark, colors]);
 
   useEffect(() => {

@@ -32,13 +32,13 @@
 
 ## 🖼️ Screenshots
 
-> Ảnh đặt trong thư mục [`screenshots/`](screenshots) với tên `image01.png`, `image02.png`, `image03.png`, …
 
 | | | |
 | :---: | :---: | :---: |
 | ![Tổng quan](screenshots/image01.png)<br/>**Tổng quan** | ![Giao dịch](screenshots/image02.png)<br/>**Danh sách giao dịch** | ![Thêm giao dịch](screenshots/image03.png)<br/>**Thêm giao dịch** |
 | ![Thống kê](screenshots/image04.png)<br/>**Thống kê** | ![Báo cáo](screenshots/image05.png)<br/>**Báo cáo PDF có biểu đồ tròn** | ![Màu chủ đề](screenshots/image06.png)<br/>**Đổi màu chủ đề** |
 | ![Chế độ tối](screenshots/image07.png)<br/>**Chế độ tối** | ![Di động](screenshots/image08.png)<br/>**Giao diện di động** | ![English](screenshots/image09.png)<br/>**Tiếng Anh** |
+| ![Lịch](screenshots/image10.png)<br/>**Lịch giao dịch** | ![Ngăn kéo ngày](screenshots/image11.png)<br/>**Chạm một ngày để mở ngăn kéo** | ![Ngăn kéo trên máy tính](screenshots/image13.png)<br/>**Ngăn kéo ngày trên máy tính** |
 
 ## ✨ Tính năng
 

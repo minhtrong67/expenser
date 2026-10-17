@@ -130,7 +130,9 @@ export default function TransactionFormModal({ open, onClose, editingTx }) {
         {recentForType.length > 0 && (
           <div>
             <p className="mb-2 text-label-md text-on-surface-variant">{t('tx.recent')}</p>
-            <div className="no-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6 pb-1">
+            {/* Two rows that fill column by column and scroll sideways together
+                (a single item stays on one row so no empty gap is left) */}
+            <div className={`no-scrollbar -mx-4 grid auto-cols-max grid-flow-col ${recentForType.length > 1 ? 'grid-rows-2' : 'grid-rows-1'} gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:-mx-6 sm:px-6`}>
               {recentForType.map((r, idx) => {
                 const cat = getCategory(r.categoryId);
                 return (
@@ -138,7 +140,7 @@ export default function TransactionFormModal({ open, onClose, editingTx }) {
                     key={`${r.categoryId}-${r.amount}-${r.note}-${idx}`}
                     type="button"
                     onClick={() => applyRecent(r)}
-                    className="state-layer ripple flex h-8 shrink-0 items-center gap-2 rounded-lg border border-outline px-3 text-label-md text-on-surface-variant"
+                    className="state-layer ripple flex h-8 items-center gap-2 whitespace-nowrap rounded-lg border border-outline px-3 text-label-md text-on-surface-variant"
                   >
                     <Emoji size={15}>{getCategoryEmoji(cat)}</Emoji>
                     <span>{cat?.name || t('common.other')}</span>

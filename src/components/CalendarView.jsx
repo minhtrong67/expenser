@@ -49,6 +49,8 @@ export default function CalendarView() {
   const changeMonth = (delta) => setCursorTs(new Date(year, month + delta, 1).getTime());
   const selectedItems = selectedDay ? [...(dayMap[selectedDay]?.items || [])].sort((a, b) => b.date - a.date) : [];
 
+  const selectedTotals = selectedDay ? dayMap[selectedDay] || { income: 0, expense: 0 } : { income: 0, expense: 0 };
+
   if (loading) return <CalendarSkeleton />;
 
   return (
@@ -118,10 +120,21 @@ export default function CalendarView() {
         </div>
       </div>
 
-      <Modal open={!!selectedDay} onClose={() => setSelectedDay(null)} title={selectedDay ? formatDate(new Date(year, month, selectedDay)) : ''} size="md">
+      <Modal open={!!selectedDay} onClose={() => setSelectedDay(null)} title={selectedDay ? formatDate(new Date(year, month, selectedDay)) : ''} variant="drawer">
         {selectedItems.length === 0 ? (
           <EmptyState icon="event_busy" text={t('calendar.noTx')} />
         ) : (
+          <div className="space-y-3 pb-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-2xl bg-income-container p-3 text-on-income-container">
+                <p className="text-label-md opacity-80">{t('tx.income')}</p>
+                <p className="wrap-any text-title-sm font-bold tabular-nums">{formatMoney(selectedTotals.income)}</p>
+              </div>
+              <div className="rounded-2xl bg-expense-container p-3 text-on-expense-container">
+                <p className="text-label-md opacity-80">{t('tx.expense')}</p>
+                <p className="wrap-any text-title-sm font-bold tabular-nums">{formatMoney(selectedTotals.expense)}</p>
+              </div>
+            </div>
           <div className="divide-y divide-outline-variant">
             {selectedItems.map((tx) => {
               const cat = getCategory(tx.categoryId);
@@ -146,6 +159,7 @@ export default function CalendarView() {
                 </div>
               );
             })}
+          </div>
           </div>
         )}
       </Modal>

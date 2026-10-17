@@ -112,7 +112,17 @@ export function AuthProvider({ children }) {
     [wrap, ensureUserDoc],
   );
 
-  const logout = useCallback(() => signOut(auth), []);
+  const logout = useCallback(() => {
+    // Page filters live in sessionStorage; don't leak them to the next account.
+    try {
+      Object.keys(window.sessionStorage)
+        .filter((k) => k.startsWith('qlct:s:'))
+        .forEach((k) => window.sessionStorage.removeItem(k));
+    } catch {
+      /* storage unavailable */
+    }
+    return signOut(auth);
+  }, []);
 
   const resetPassword = useCallback(
     async (email) => {

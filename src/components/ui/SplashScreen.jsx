@@ -10,7 +10,6 @@ export default function SplashScreen() {
   return (
     <div className="splash" role="status" aria-live="polite">
       <div className="splash-spinner" />
-      <div className="splash-name">Expenser</div>
       <span className="sr-only">{t('common.loading')}</span>
     </div>
   );

@@ -17,6 +17,8 @@ const DIALOG_WIDTH = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg' };
  *    content and confirmations.
  *  - variant "sheet": full-height side sheet (full-screen on phones, slides in
  *    from the right on larger screens). For forms with many fields.
+ *  - variant "drawer": bottom sheet on phones (drag handle, swipe down to
+ *    close), side drawer on larger screens. For read-only detail lists.
  * Nothing is auto-focused (no keyboard popping up on phones); focus lands on
  * the panel itself and is trapped inside until the overlay closes.
  */
@@ -28,6 +30,33 @@ export default function Modal({ open, onClose, title, children, size = 'md', var
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  // Drawer on phones: drag the handle/header down to dismiss.
+  const dragRef = useRef({ startY: 0, dy: 0, active: false });
+  function onDragStart(e) {
+    dragRef.current = { startY: e.clientY, dy: 0, active: true };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    if (panelRef.current) panelRef.current.style.transition = 'none';
+  }
+  function onDragMove(e) {
+    const d = dragRef.current;
+    if (!d.active) return;
+    d.dy = Math.max(0, e.clientY - d.startY);
+    if (panelRef.current) panelRef.current.style.transform = `translateY(${d.dy}px)`;
+  }
+  function onDragEnd() {
+    const d = dragRef.current;
+    if (!d.active) return;
+    d.active = false;
+    const panel = panelRef.current;
+    if (!panel) return;
+    if (d.dy > 90) {
+      onCloseRef.current?.();
+      return;
+    }
+    panel.style.transition = 'transform 200ms cubic-bezier(0.2, 0, 0, 1)';
+    panel.style.transform = '';
+  }
 
   useEffect(() => {
     if (!open) return undefined;
@@ -71,9 +100,17 @@ export default function Modal({ open, onClose, title, children, size = 'md', var
   if (!open) return null;
 
   const isSheet = variant === 'sheet';
+  const isDrawer = variant === 'drawer';
+
+  const wrapperClass = isSheet ? 'justify-end' : isDrawer ? 'items-end justify-center sm:items-stretch sm:justify-end' : 'items-center justify-center p-4';
+  const panelClass = isSheet
+    ? 'h-dvh animate-sheet-right sm:max-w-xl sm:rounded-l-4xl'
+    : isDrawer
+      ? 'max-h-[85dvh] animate-sheet-up rounded-t-4xl sm:h-dvh sm:max-h-none sm:max-w-md sm:animate-sheet-right sm:rounded-l-4xl sm:rounded-tr-none'
+      : `max-h-[90dvh] animate-scale-in rounded-4xl ${DIALOG_WIDTH[size] || DIALOG_WIDTH.md}`;
 
   return createPortal(
-    <div className={`fixed inset-0 z-50 flex ${isSheet ? 'justify-end' : 'items-center justify-center p-4'}`}>
+    <div className={`fixed inset-0 z-50 flex ${wrapperClass}`}>
       <div className="absolute inset-0 animate-fade-in bg-scrim/32" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
@@ -82,14 +119,22 @@ export default function Modal({ open, onClose, title, children, size = 'md', var
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        style={isSheet ? { paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}
-        className={`relative z-10 flex w-full flex-col overflow-hidden bg-surface-container-high shadow-elev-3 outline-none ${
-          isSheet
-            ? 'h-dvh animate-sheet-right sm:max-w-xl sm:rounded-l-4xl'
-            : `max-h-[90dvh] animate-scale-in rounded-4xl ${DIALOG_WIDTH[size] || DIALOG_WIDTH.md}`
-        }`}
+        style={isSheet || isDrawer ? { paddingTop: isSheet ? 'env(safe-area-inset-top, 0px)' : undefined, paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}
+        className={`relative z-10 flex w-full flex-col overflow-hidden bg-surface-container-high shadow-elev-3 outline-none ${panelClass}`}
       >
-        <div className={`flex shrink-0 items-center gap-2 pb-2 ${isSheet ? 'px-4 pt-3 sm:px-6' : 'px-6 pt-5'}`}>
+        {isDrawer && (
+          <div
+            className="flex shrink-0 cursor-grab touch-none justify-center pb-1 pt-3 active:cursor-grabbing sm:hidden"
+            onPointerDown={onDragStart}
+            onPointerMove={onDragMove}
+            onPointerUp={onDragEnd}
+            onPointerCancel={onDragEnd}
+            aria-hidden="true"
+          >
+            <span className="h-1 w-8 rounded-full bg-on-surface-variant/40" />
+          </div>
+        )}
+        <div className={`flex shrink-0 items-center gap-2 pb-2 ${isSheet ? 'px-4 pt-3 sm:px-6' : isDrawer ? 'px-6 pt-1 sm:pt-5' : 'px-6 pt-5'}`}>
           {isSheet && <IconButton icon="close" label={t('common.close')} onClick={onClose} className="-ml-2" />}
           <h2 id={titleId} className={`min-w-0 flex-1 wrap-any text-on-surface ${isSheet ? 'text-title-lg' : 'text-headline-sm'}`}>
             {title}
